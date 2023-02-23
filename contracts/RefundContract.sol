@@ -18,4 +18,15 @@ contract RefundContract {
     function addDeliveryPartner(address deliveryPartner) public onlyOwner {
         deliveryPartners.push(deliveryPartner);
     }
+
+    function isDeliveryPartner(
+        address deliveryPartner
+    ) public view returns (bool) {
+        for (uint i = 0; i < deliveryPartners.length; i++) {
+            if (deliveryPartners[i] == deliveryPartner) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
