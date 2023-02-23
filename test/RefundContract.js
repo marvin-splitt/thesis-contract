@@ -16,4 +16,16 @@ describe("RefundContract", () => {
       expect(await refundContract.owner()).to.equal(await admin.getAddress());
     });
   });
+  describe("Setup", () => {
+    it("Should allow only the owner to setup delivery partner", async () => {
+      const { refundContract, customer, deliveryPartner } = await loadFixture(
+        deployFixture
+      );
+      await expect(
+        refundContract
+          .connect(customer)
+          .addDeliveryPartner(await deliveryPartner.getAddress())
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  });
 });
