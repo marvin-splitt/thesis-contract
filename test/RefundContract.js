@@ -1,6 +1,5 @@
 const { expect } = require("chai");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
-const { ethers } = require("hardhat");
 
 const deployFixture = async () => {
   const RefundContract = await ethers.getContractFactory("RefundContract");
@@ -14,7 +13,7 @@ describe("RefundContract", () => {
   describe("Deployment", () => {
     it("Should deploy the contract", async () => {
       const { refundContract, admin } = await loadFixture(deployFixture);
-      expect(await refundContract.owner()).to.equal(admin.getAddress());
+      expect(await refundContract.owner()).to.equal(await admin.getAddress());
     });
   });
 });
