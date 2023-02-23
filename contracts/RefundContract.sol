@@ -15,7 +15,7 @@ contract RefundContract {
         owner = msg.sender;
     }
 
-    function addDeliveryPartner(address _deliveryPartner) public onlyOwner {
-        deliveryPartners.push(_deliveryPartner);
+    function addDeliveryPartner(address deliveryPartner) public onlyOwner {
+        deliveryPartners.push(deliveryPartner);
     }
 }
