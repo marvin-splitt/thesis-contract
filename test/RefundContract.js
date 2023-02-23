@@ -21,11 +21,24 @@ describe("RefundContract", () => {
       const { refundContract, customer, deliveryPartner } = await loadFixture(
         deployFixture
       );
-      await expect(
+      expect(
         refundContract
           .connect(customer)
           .addDeliveryPartner(await deliveryPartner.getAddress())
       ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+    it("Should allow the owner to setup delivery partner", async () => {
+      const { refundContract, admin, deliveryPartner } = await loadFixture(
+        deployFixture
+      );
+      await refundContract.addDeliveryPartner(
+        await deliveryPartner.getAddress()
+      );
+      expect(
+        await refundContract.isDeliveryPartner(
+          await deliveryPartner.getAddress()
+        )
+      ).to.be.true;
     });
   });
 });
