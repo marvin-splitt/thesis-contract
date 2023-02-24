@@ -29,4 +29,9 @@ contract RefundContract {
         }
         return false;
     }
+
+    function createTransaction(
+        address customer,
+        uint amount
+    ) public onlyOwner {}
 }

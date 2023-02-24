@@ -22,7 +22,7 @@ describe("RefundContract", () => {
       const { refundContract, customer, deliveryPartner } = await loadFixture(
         deployFixture
       );
-      expect(
+      await expect(
         refundContract
           .connect(customer)
           .addDeliveryPartner(await deliveryPartner.getAddress())
@@ -47,7 +47,7 @@ describe("RefundContract", () => {
       const { refundContract, customer, deliveryPartner } = await loadFixture(
         deployFixture
       );
-      expect(
+      await expect(
         refundContract
           .connect(customer)
           .createTransaction(
