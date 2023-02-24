@@ -37,7 +37,7 @@ contract RefundContract {
         address customer,
         uint amount
     ) public view onlyOwner returns (bytes32) {
-        // require(amount > 0, "Amount must be greater than 0");
+        require(amount > 0, "Amount must be greater than 0");
         bytes32 transactionId = UniqueId.getUniqueId();
 
         return transactionId;
