@@ -3,7 +3,15 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 const deployFixture = async () => {
-  const RefundContract = await ethers.getContractFactory("RefundContract");
+  const UniqueId = await ethers.getContractFactory('UniqueId');
+  const uniqueId = await UniqueId.deploy();
+  await uniqueId.deployed();
+
+  const RefundContract = await ethers.getContractFactory("RefundContract", {
+    libraries: {
+      UniqueId: uniqueId.address
+    }
+  });
   const refundContract = await RefundContract.deploy();
   const [admin, customer, deliveryPartner] = await ethers.getSigners();
   await refundContract.deployed();
@@ -57,16 +65,18 @@ describe("RefundContract", () => {
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
     it("Should to create a new transaction and return the transaction id", async () => {
-      const { refundContract, customer } = await loadFixture(
+      const { refundContract, customer, admin } = await loadFixture(
         deployFixture
       );
+      const tId = await refundContract
+        .connect(admin)
+        .createTransaction(
+          await customer.getAddress(),
+          100
+        )
       expect(
-        refundContract
-          .createTransaction(
-            await customer.getAddress(),
-            100
-          )
-      ).to.be.a.properAddress;
+        tId
+      ).to.be.a.properHex(64);
     });
   })
 });
