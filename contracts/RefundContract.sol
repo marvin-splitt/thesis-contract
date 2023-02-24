@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
+import "./UniqueId.sol";
+import "hardhat/console.sol";
+
 pragma solidity ^0.8.17;
 
 contract RefundContract {
@@ -33,5 +36,10 @@ contract RefundContract {
     function createTransaction(
         address customer,
         uint amount
-    ) public onlyOwner {}
+    ) public view onlyOwner returns (bytes32) {
+        // require(amount > 0, "Amount must be greater than 0");
+        bytes32 transactionId = UniqueId.getUniqueId();
+
+        return transactionId;
+    }
 }
