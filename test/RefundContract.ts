@@ -42,4 +42,19 @@ describe("RefundContract", () => {
       ).to.be.true;
     });
   });
+  describe("Transactions", () => {
+    it("Should allow only the owner to create a new transaction", async () => {
+      const { refundContract, customer, deliveryPartner } = await loadFixture(
+        deployFixture
+      );
+      expect(
+        refundContract
+          .connect(customer)
+          .createTransaction(
+            await customer.getAddress(),
+            100
+          )
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  })
 });
