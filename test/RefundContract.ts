@@ -56,5 +56,17 @@ describe("RefundContract", () => {
           )
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
+    it("Should to create a new transaction and return the transaction id", async () => {
+      const { refundContract, customer } = await loadFixture(
+        deployFixture
+      );
+      expect(
+        refundContract
+          .createTransaction(
+            await customer.getAddress(),
+            100
+          )
+      ).to.be.a.properAddress;
+    });
   })
 });
