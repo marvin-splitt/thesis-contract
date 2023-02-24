@@ -18,6 +18,13 @@ contract RefundContract {
         owner = msg.sender;
     }
 
+    // event to be emitted when a transaction is created
+    event TransactionCreated(
+        bytes32 transactionId,
+        address customer,
+        uint amount
+    );
+
     function addDeliveryPartner(address deliveryPartner) public onlyOwner {
         deliveryPartners.push(deliveryPartner);
     }
@@ -33,13 +40,9 @@ contract RefundContract {
         return false;
     }
 
-    function createTransaction(
-        address customer,
-        uint amount
-    ) public view onlyOwner returns (bytes32) {
+    function createTransaction(address customer, uint amount) public onlyOwner {
         require(amount > 0, "Amount must be greater than 0");
         bytes32 transactionId = UniqueId.getUniqueId();
-
-        return transactionId;
+        emit TransactionCreated(transactionId, customer, amount);
     }
 }

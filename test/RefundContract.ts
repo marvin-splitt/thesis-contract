@@ -72,7 +72,35 @@ describe("RefundContract", () => {
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
-    it("Should create a new transaction and return the transaction id", async () => {
+    it("Should only allow amounts greater than 0", async () => {
+      const { refundContract, customer, admin } = await loadFixture(
+        deployFixture
+      );
+      await expect(
+        refundContract
+          .connect(admin)
+          .createTransaction(
+            await customer.getAddress(),
+            0
+          )
+      ).to.be.revertedWith("Amount must be greater than 0");
+    });
+
+    it("Should emit a TransactionCreated event", async () => {
+      const { refundContract, customer, admin } = await loadFixture(
+        deployFixture
+      );
+      await expect(
+        refundContract
+          .connect(admin)
+          .createTransaction(
+            await customer.getAddress(),
+            100
+          )
+      ).to.emit(refundContract, "TransactionCreated");
+    })
+
+    it("Should create a new transaction and with a transaction hash", async () => {
       const { refundContract, customer, admin } = await loadFixture(
         deployFixture
       );
@@ -82,22 +110,15 @@ describe("RefundContract", () => {
           await customer.getAddress(),
           100
         )
-      expect(
-        tId
-      ).to.be.a.properHex(64);
-    });
 
-    it("Should only allow amounts greater than 0", async () => {
-      const { refundContract, customer } = await loadFixture(
-        deployFixture
-      );
-      await expect(
-        refundContract
-          .createTransaction(
-            await customer.getAddress(),
-            0
-          )
-      ).to.be.revertedWith("Amount must be greater than 0");
+      // get event args of TransactionCreated event
+      const receipt = await tId.wait();
+      const event = receipt.events?.find((e) => e.event === "TransactionCreated");
+      const args = event?.args;
+
+      expect(
+        args?.transactionId
+      ).to.be.a.properHex(64);
     });
   })
 });
