@@ -64,6 +64,7 @@ contract RefundContract {
     function createOrder(address customer, uint amount) public onlyOwner {
         require(amount > 0, "Amount must be greater than 0");
         bytes32 orderId = UniqueId.getUniqueId();
+        orders[orderId] = Order(orderId, customer, amount, Status.CREATED, "");
         emit OrderCreated(orderId, customer, amount, Status.CREATED);
     }
 }

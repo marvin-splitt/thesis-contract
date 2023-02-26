@@ -139,7 +139,8 @@ describe("RefundContract", () => {
 
       const order = await refundContract.orders(args?.orderId);
       expect(order.amount).to.equal(100);
-      // expect(order.status).to.equal(0);
+      expect(order.status).to.equal(0);
+      expect(order.customer).to.equal(await customer.getAddress());
     });
   })
 });
