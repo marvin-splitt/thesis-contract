@@ -15,7 +15,16 @@ const deployFixture = async () => {
   const refundContract = await RefundContract.deploy();
   const [admin, customer, deliveryPartner] = await ethers.getSigners();
   await refundContract.deployed();
-  return { refundContract, admin, customer, deliveryPartner };
+
+  const orderRes = await refundContract
+    .connect(admin)
+    .createOrder(
+      await customer.getAddress(),
+      100
+    )
+
+  const orderReceipt = await orderRes.wait();
+  return { refundContract, admin, customer, deliveryPartner, orderReceipt };
 };
 
 describe("RefundContract", () => {
@@ -42,7 +51,7 @@ describe("RefundContract", () => {
     });
 
     it("Should allow the owner to setup delivery partner", async () => {
-      const { refundContract, admin, deliveryPartner } = await loadFixture(
+      const { refundContract, deliveryPartner } = await loadFixture(
         deployFixture
       );
       await refundContract.addDeliveryPartner(
@@ -59,7 +68,7 @@ describe("RefundContract", () => {
 
   describe("Orders", () => {
     it("Should allow only the owner to create a new order", async () => {
-      const { refundContract, customer, deliveryPartner } = await loadFixture(
+      const { refundContract, customer } = await loadFixture(
         deployFixture
       );
       await expect(
@@ -101,19 +110,12 @@ describe("RefundContract", () => {
     })
 
     it("Should create a new order event and with an order hash", async () => {
-      const { refundContract, customer, admin } = await loadFixture(
+      const { orderReceipt } = await loadFixture(
         deployFixture
       );
-      const tId = await refundContract
-        .connect(admin)
-        .createOrder(
-          await customer.getAddress(),
-          100
-        )
 
       // get event args of OrderCreated event
-      const receipt = await tId.wait();
-      const event = receipt.events?.find((e) => e.event === "OrderCreated");
+      const event = orderReceipt.events?.find((e) => e.event === "OrderCreated");
       const args = event?.args;
 
       expect(
@@ -122,25 +124,32 @@ describe("RefundContract", () => {
     });
 
     it("Should create a new order mapping entry", async () => {
-      const { refundContract, customer, admin } = await loadFixture(
+      const { refundContract, customer, orderReceipt } = await loadFixture(
         deployFixture
       );
-      const tId = await refundContract
-        .connect(admin)
-        .createOrder(
-          await customer.getAddress(),
-          100
-        )
 
-      // get event args of OrderCreated event
-      const receipt = await tId.wait();
-      const event = receipt.events?.find((e) => e.event === "OrderCreated");
+      const event = orderReceipt.events?.find((e) => e.event === "OrderCreated");
       const args = event?.args;
 
       const order = await refundContract.getOrder(args?.orderId);
       expect(order.amount).to.equal(100);
       expect(order.status).to.equal(0);
       expect(order.customer).to.equal(await customer.getAddress());
+    });
+
+    it("Should allow only the owner to retrieve an order entry", async () => {
+      const { refundContract, customer, orderReceipt } = await loadFixture(
+        deployFixture
+      );
+
+      const event = orderReceipt.events?.find((e) => e.event === "OrderCreated");
+      const args = event?.args;
+
+      await expect(
+        refundContract
+          .connect(customer)
+          .getOrder(args?.orderId)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   })
 });
