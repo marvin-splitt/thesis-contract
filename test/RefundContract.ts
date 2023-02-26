@@ -57,15 +57,15 @@ describe("RefundContract", () => {
   });
 
 
-  describe("Transactions", () => {
-    it("Should allow only the owner to create a new transaction", async () => {
+  describe("Orders", () => {
+    it("Should allow only the owner to create a new order", async () => {
       const { refundContract, customer, deliveryPartner } = await loadFixture(
         deployFixture
       );
       await expect(
         refundContract
           .connect(customer)
-          .createTransaction(
+          .createOrder(
             await customer.getAddress(),
             100
           )
@@ -79,46 +79,67 @@ describe("RefundContract", () => {
       await expect(
         refundContract
           .connect(admin)
-          .createTransaction(
+          .createOrder(
             await customer.getAddress(),
             0
           )
       ).to.be.revertedWith("Amount must be greater than 0");
     });
 
-    it("Should emit a TransactionCreated event", async () => {
+    it("Should emit a OrderCreated event", async () => {
       const { refundContract, customer, admin } = await loadFixture(
         deployFixture
       );
       await expect(
         refundContract
           .connect(admin)
-          .createTransaction(
+          .createOrder(
             await customer.getAddress(),
             100
           )
-      ).to.emit(refundContract, "TransactionCreated");
+      ).to.emit(refundContract, "OrderCreated");
     })
 
-    it("Should create a new transaction and with a transaction hash", async () => {
+    it("Should create a new order event and with an order hash", async () => {
       const { refundContract, customer, admin } = await loadFixture(
         deployFixture
       );
       const tId = await refundContract
         .connect(admin)
-        .createTransaction(
+        .createOrder(
           await customer.getAddress(),
           100
         )
 
-      // get event args of TransactionCreated event
+      // get event args of OrderCreated event
       const receipt = await tId.wait();
-      const event = receipt.events?.find((e) => e.event === "TransactionCreated");
+      const event = receipt.events?.find((e) => e.event === "OrderCreated");
       const args = event?.args;
 
       expect(
-        args?.transactionId
+        args?.orderId
       ).to.be.a.properHex(64);
+    });
+
+    it("Should create a new order mapping entry", async () => {
+      const { refundContract, customer, admin } = await loadFixture(
+        deployFixture
+      );
+      const tId = await refundContract
+        .connect(admin)
+        .createOrder(
+          await customer.getAddress(),
+          100
+        )
+
+      // get event args of OrderCreated event
+      const receipt = await tId.wait();
+      const event = receipt.events?.find((e) => e.event === "OrderCreated");
+      const args = event?.args;
+
+      const order = await refundContract.orders(args?.orderId);
+      expect(order.amount).to.equal(100);
+      // expect(order.status).to.equal(0);
     });
   })
 });

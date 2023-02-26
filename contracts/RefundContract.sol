@@ -14,15 +14,36 @@ contract RefundContract {
         _;
     }
 
+    enum Status {
+        CREATED,
+        PAID,
+        SHIPPED,
+        DELIVERED,
+        RETURNED,
+        REFUNDED
+    }
+
     constructor() {
         owner = msg.sender;
     }
 
-    // event to be emitted when a transaction is created
-    event TransactionCreated(
-        bytes32 transactionId,
+    // struct to store order details
+    struct Order {
+        bytes32 orderId;
+        address customer;
+        uint amount;
+        Status status;
+        string externalOrderNumber;
+    }
+
+    mapping(bytes32 => Order) public orders;
+
+    // event to be emitted when an order is created
+    event OrderCreated(
+        bytes32 orderId,
         address customer,
-        uint amount
+        uint amount,
+        Status status
     );
 
     function addDeliveryPartner(address deliveryPartner) public onlyOwner {
@@ -40,9 +61,9 @@ contract RefundContract {
         return false;
     }
 
-    function createTransaction(address customer, uint amount) public onlyOwner {
+    function createOrder(address customer, uint amount) public onlyOwner {
         require(amount > 0, "Amount must be greater than 0");
-        bytes32 transactionId = UniqueId.getUniqueId();
-        emit TransactionCreated(transactionId, customer, amount);
+        bytes32 orderId = UniqueId.getUniqueId();
+        emit OrderCreated(orderId, customer, amount, Status.CREATED);
     }
 }
