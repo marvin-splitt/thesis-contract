@@ -137,7 +137,7 @@ describe("RefundContract", () => {
       const event = receipt.events?.find((e) => e.event === "OrderCreated");
       const args = event?.args;
 
-      const order = await refundContract.orders(args?.orderId);
+      const order = await refundContract.getOrder(args?.orderId);
       expect(order.amount).to.equal(100);
       expect(order.status).to.equal(0);
       expect(order.customer).to.equal(await customer.getAddress());

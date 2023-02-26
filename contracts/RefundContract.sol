@@ -36,7 +36,7 @@ contract RefundContract {
         string externalOrderNumber;
     }
 
-    mapping(bytes32 => Order) public orders;
+    mapping(bytes32 => Order) private orders;
 
     // event to be emitted when an order is created
     event OrderCreated(
@@ -66,5 +66,11 @@ contract RefundContract {
         bytes32 orderId = UniqueId.getUniqueId();
         orders[orderId] = Order(orderId, customer, amount, Status.CREATED, "");
         emit OrderCreated(orderId, customer, amount, Status.CREATED);
+    }
+
+    function getOrder(
+        bytes32 orderId
+    ) public view onlyOwner returns (Order memory) {
+        return orders[orderId];
     }
 }
