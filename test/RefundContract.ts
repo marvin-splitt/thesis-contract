@@ -3,15 +3,8 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 const deployFixture = async () => {
-  const UniqueId = await ethers.getContractFactory('UniqueId');
-  const uniqueId = await UniqueId.deploy();
-  await uniqueId.deployed();
 
-  const RefundContract = await ethers.getContractFactory("RefundContract", {
-    libraries: {
-      UniqueId: uniqueId.address
-    }
-  });
+  const RefundContract = await ethers.getContractFactory("RefundContract");
   const refundContract = await RefundContract.deploy();
   const [admin, customer, deliveryPartner] = await ethers.getSigners();
   await refundContract.deployed();
@@ -120,7 +113,7 @@ describe("RefundContract", () => {
 
       expect(
         args?.orderId
-      ).to.be.a.properHex(64);
+      ).to.be.a.instanceOf(ethers.BigNumber);
     });
 
     it("Should create a new order mapping entry", async () => {

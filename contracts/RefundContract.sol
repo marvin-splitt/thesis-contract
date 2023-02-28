@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
-import "./UniqueId.sol";
 import "hardhat/console.sol";
 
 pragma solidity ^0.8.17;
 
 contract RefundContract {
     address public owner;
+    uint private orderCounter;
     // array of delivery partner addresses
     address[] private deliveryPartners;
 
@@ -29,18 +29,18 @@ contract RefundContract {
 
     // struct to store order details
     struct Order {
-        bytes32 orderId;
+        uint orderId;
         address customer;
         uint amount;
         Status status;
         string externalOrderNumber;
     }
 
-    mapping(bytes32 => Order) private orders;
+    mapping(uint => Order) private orders;
 
     // event to be emitted when an order is created
     event OrderCreated(
-        bytes32 orderId,
+        uint orderId,
         address customer,
         uint amount,
         Status status
@@ -63,13 +63,19 @@ contract RefundContract {
 
     function createOrder(address customer, uint amount) public onlyOwner {
         require(amount > 0, "Amount must be greater than 0");
-        bytes32 orderId = UniqueId.getUniqueId();
-        orders[orderId] = Order(orderId, customer, amount, Status.CREATED, "");
-        emit OrderCreated(orderId, customer, amount, Status.CREATED);
+        orderCounter++;
+        orders[orderCounter] = Order(
+            orderCounter,
+            customer,
+            amount,
+            Status.CREATED,
+            ""
+        );
+        emit OrderCreated(orderCounter, customer, amount, Status.CREATED);
     }
 
     function getOrder(
-        bytes32 orderId
+        uint orderId
     ) public view onlyOwner returns (Order memory) {
         return orders[orderId];
     }
