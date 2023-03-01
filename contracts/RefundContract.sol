@@ -79,4 +79,15 @@ contract RefundContract {
     ) public view onlyOwner returns (Order memory) {
         return orders[orderId];
     }
+
+    function markOrderAsShipped(uint orderId) public {
+        require(
+            isDeliveryPartner(msg.sender),
+            "Only delivery partners can call this function"
+        );
+        Order storage order = orders[orderId];
+        require(order.status == Status.PAID, "Order must be in PAID status");
+        order.status = Status.SHIPPED;
+        orders[orderId] = order;
+    }
 }

@@ -144,5 +144,21 @@ describe("RefundContract", () => {
           .getOrder(args?.orderId)
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
+
+    it("Should reject to update the status of an order entry if not delivery partner", async () => {
+      const { refundContract, customer, orderReceipt } = await loadFixture(
+        deployFixture
+      );
+
+      const event = orderReceipt.events?.find((e) => e.event === "OrderCreated");
+      const args = event?.args;
+
+      await expect(
+        refundContract
+          .connect(customer)
+          .markOrderAsShipped(args?.orderId)
+      ).to.be.revertedWith("Only delivery partners can call this function");
+
+    });
   })
 });
