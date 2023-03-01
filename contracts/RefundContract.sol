@@ -86,7 +86,10 @@ contract RefundContract {
             "Only delivery partners can call this function"
         );
         Order storage order = orders[orderId];
-        require(order.status == Status.PAID, "Order must be in PAID status");
+        require(
+            order.status == Status.PAID,
+            "Order must be marked as paid to be shipped"
+        );
         order.status = Status.SHIPPED;
         orders[orderId] = order;
     }

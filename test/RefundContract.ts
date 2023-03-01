@@ -6,7 +6,7 @@ const deployFixture = async () => {
 
   const RefundContract = await ethers.getContractFactory("RefundContract");
   const refundContract = await RefundContract.deploy();
-  const [admin, customer, deliveryPartner] = await ethers.getSigners();
+  const [admin, customer, deliveryPartner, addedDeliveryPartner] = await ethers.getSigners();
   await refundContract.deployed();
 
   const orderRes = await refundContract
@@ -17,7 +17,12 @@ const deployFixture = async () => {
     )
 
   const orderReceipt = await orderRes.wait();
-  return { refundContract, admin, customer, deliveryPartner, orderReceipt };
+
+  await refundContract.addDeliveryPartner(
+    await addedDeliveryPartner.getAddress()
+  );
+
+  return { refundContract, admin, customer, deliveryPartner, orderReceipt, addedDeliveryPartner };
 };
 
 describe("RefundContract", () => {
@@ -145,7 +150,7 @@ describe("RefundContract", () => {
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
-    it("Should reject to update the status of an order entry if not delivery partner", async () => {
+    it("Should reject to mark the status of an order entry as shipped if caller is not delivery partner", async () => {
       const { refundContract, customer, orderReceipt } = await loadFixture(
         deployFixture
       );
@@ -158,6 +163,22 @@ describe("RefundContract", () => {
           .connect(customer)
           .markOrderAsShipped(args?.orderId)
       ).to.be.revertedWith("Only delivery partners can call this function");
+
+    });
+
+    it("Should reject to mark the status of an order entry as shipped if order is not paid", async () => {
+      const { refundContract, addedDeliveryPartner, orderReceipt } = await loadFixture(
+        deployFixture
+      );
+
+      const event = orderReceipt.events?.find((e) => e.event === "OrderCreated");
+      const args = event?.args;
+
+      await expect(
+        refundContract
+          .connect(addedDeliveryPartner)
+          .markOrderAsShipped(args?.orderId)
+      ).to.be.revertedWith("Order must be marked as paid to be shipped");
 
     });
   })
