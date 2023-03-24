@@ -1,4 +1,5 @@
 node_modules
+# ignore all .env.* files but not .env.template
 .env
 coverage
 coverage.json
