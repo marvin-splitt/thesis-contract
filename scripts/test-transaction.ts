@@ -1,5 +1,4 @@
-const { ethers, network } = require("hardhat");
-
+import { ethers, network } from "hardhat";
 async function send() {
     const vitalik_address = "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B";
     const addressTo = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
