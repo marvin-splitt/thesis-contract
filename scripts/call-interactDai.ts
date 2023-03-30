@@ -1,8 +1,14 @@
 import { ethers, network } from "hardhat";
 
+const daiAbi = [
+    "function approve(address spender, uint256 amount) external returns (bool)",
+    "function balanceOf(address account) external view returns (uint256)",
+]
+
 async function deploy() {
     const InteractDaiContract = await ethers.getContractFactory("InteractDaiContract");
     const interactDaiContract = InteractDaiContract.attach(process.env.INTERACT_DAI_CONTRACT_ADDRESS || "");
+
     const daiSymbol = await interactDaiContract.symbol();
     console.log("Dai symbol:", daiSymbol);
 
@@ -16,22 +22,23 @@ async function deploy() {
     // console.log("Contracts owner address:", ownerAddress);
     const pulseXAddress = '0x075e72a5eDf65F0A5f44699c7654C1a76941Ddc8';
 
-    await network.provider.request({
-        method: "hardhat_impersonateAccount",
-        params: [pulseXAddress],
-    });
+    await network.provider.send("hardhat_impersonateAccount", [pulseXAddress]);
 
     //   make pulseX the signer
     const signer = await ethers.getSigner(pulseXAddress);
 
-    console.log("PulseX ETH account balance:", ethers.utils.formatEther(await signer.getBalance()));
+    const daiContract = new ethers.Contract('0x6B175474E89094C44Da98b954EedeAC495271d0F', daiAbi, signer);
+
+    console.log("PulseX account balance:", ethers.utils.formatEther(await daiContract.balanceOf(pulseXAddress)));
 
     console.log(
         "PulseX account before transaction",
         ethers.utils.formatEther(await interactDaiContract.balanceOf(pulseXAddress))
     );
 
-    const recieptTx = await interactDaiContract.connect(signer).transfer(myAccount.address, ethers.utils.parseEther("0.1"));
+    await daiContract.connect(signer).approve(interactDaiContract.address, ethers.utils.parseEther("0.01"), { gasLimit: 1000000 });
+
+    const recieptTx = await interactDaiContract.connect(signer).transfer(myAccount.address, ethers.utils.parseEther("0.01"), { gasLimit: 1000000 });
 
     await recieptTx.wait();
 

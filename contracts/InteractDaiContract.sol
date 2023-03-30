@@ -31,20 +31,20 @@ contract InteractDaiContract {
     }
 
     function transfer(address dst, uint wad) public returns (bool) {
-        return daiContract.transfer(dst, wad);
+        return daiContract.transferFrom(msg.sender, dst, wad);
     }
 
     function approve(address guy, uint wad) public returns (bool) {
         return daiContract.approve(guy, wad);
     }
 
-    // function transferFrom(
-    //     address src,
-    //     address dst,
-    //     uint wad
-    // ) public returns (bool) {
-    //     return daiContract.transferFrom(src, dst, wad);
-    // }
+    function transferFrom(
+        address src,
+        address dst,
+        uint wad
+    ) public returns (bool) {
+        return daiContract.transferFrom(src, dst, wad);
+    }
 
     function balanceOf(address guy) public view returns (uint) {
         return daiContract.balanceOf(guy);
