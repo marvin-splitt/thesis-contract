@@ -3,7 +3,19 @@ import "hardhat/console.sol";
 
 pragma solidity ^0.8.17;
 
+// DAI contract interface
+interface DaiContract {
+    function approve(address guy, uint wad) external returns (bool);
+
+    function transferFrom(
+        address src,
+        address dst,
+        uint wad
+    ) external returns (bool);
+}
+
 contract RefundContract {
+    DaiContract private daiContract;
     address public owner;
     uint private orderCounter;
     // array of delivery partner addresses
@@ -23,7 +35,8 @@ contract RefundContract {
         REFUNDED
     }
 
-    constructor() {
+    constructor(address daiContractAddress) {
+        daiContract = DaiContract(daiContractAddress);
         owner = msg.sender;
     }
 
@@ -45,6 +58,16 @@ contract RefundContract {
         uint amount,
         Status status
     );
+
+    // DAI Contract transferFrom wrapper
+    function transferDai(address dst, uint wad) public returns (bool) {
+        return daiContract.transferFrom(msg.sender, dst, wad);
+    }
+
+    // DAI Contract approve wrapper
+    function approveDai(address guy, uint wad) public returns (bool) {
+        return daiContract.approve(guy, wad);
+    }
 
     function addDeliveryPartner(address deliveryPartner) public onlyOwner {
         deliveryPartners.push(deliveryPartner);

@@ -3,21 +3,13 @@ pragma solidity ^0.8.17;
 
 // DAI contract interface
 interface DaiContract {
-    function symbol() external view returns (string memory);
-
-    function getOwner() external view returns (address);
-
     function approve(address guy, uint wad) external returns (bool);
-
-    function transfer(address dst, uint wad) external returns (bool);
 
     function transferFrom(
         address src,
         address dst,
         uint wad
     ) external returns (bool);
-
-    function balanceOf(address guy) external view returns (uint);
 }
 
 contract InteractDaiContract {
@@ -27,7 +19,6 @@ contract InteractDaiContract {
 
     constructor(address daiContractAddress) {
         daiContract = DaiContract(daiContractAddress);
-        symbol = daiContract.symbol();
     }
 
     function transfer(address dst, uint wad) public returns (bool) {
@@ -44,9 +35,5 @@ contract InteractDaiContract {
         uint wad
     ) public returns (bool) {
         return daiContract.transferFrom(src, dst, wad);
-    }
-
-    function balanceOf(address guy) public view returns (uint) {
-        return daiContract.balanceOf(guy);
     }
 }
