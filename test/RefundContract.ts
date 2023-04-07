@@ -2,10 +2,15 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
+const daiAbi = [
+  "function approve(address spender, uint256 amount) external returns (bool)",
+  "function balanceOf(address account) external view returns (uint256)",
+]
+
 const deployFixture = async () => {
 
   const RefundContract = await ethers.getContractFactory("RefundContract");
-  const refundContract = await RefundContract.deploy();
+  const refundContract = await RefundContract.deploy(process.env.DAI_CONTRACT_ADDRESS!);
   const [admin, customer, deliveryPartner, addedDeliveryPartner] = await ethers.getSigners();
   await refundContract.deployed();
 
@@ -28,10 +33,16 @@ const deployFixture = async () => {
 describe("RefundContract", () => {
 
   describe("Deployment", () => {
-    it("Should deploy the contract", async () => {
+    it("Should deploy the contract with the correct owner", async () => {
       const { refundContract, admin } = await loadFixture(deployFixture);
       expect(await refundContract.owner()).to.equal(await admin.getAddress());
     });
+
+    it("Should deploy the contract with the correct dai contract address", async () => {
+      const { refundContract } = await loadFixture(deployFixture);
+      expect(await refundContract.daiContract()).to.equal(process.env.DAI_CONTRACT_ADDRESS);
+    });
+
   });
 
 
@@ -181,5 +192,6 @@ describe("RefundContract", () => {
       ).to.be.revertedWith("Order must be marked as paid to be shipped");
 
     });
-  })
+  });
+
 });

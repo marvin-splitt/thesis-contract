@@ -15,7 +15,7 @@ interface DaiContract {
 }
 
 contract RefundContract {
-    DaiContract private daiContract;
+    DaiContract public daiContract;
     address public owner;
     uint private orderCounter;
     // array of delivery partner addresses
