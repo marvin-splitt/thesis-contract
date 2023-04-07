@@ -21,8 +21,8 @@ contract InteractDaiContract {
         daiContract = DaiContract(daiContractAddress);
     }
 
-    function transfer(address dst, uint wad) public returns (bool) {
-        return daiContract.transferFrom(msg.sender, dst, wad);
+    function payOrder(uint wad) public returns (bool) {
+        return daiContract.transferFrom(msg.sender, address(this), wad);
     }
 
     function approve(address guy, uint wad) public returns (bool) {
