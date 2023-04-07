@@ -60,8 +60,8 @@ contract RefundContract {
     );
 
     // DAI Contract transferFrom wrapper
-    function transferDai(address dst, uint wad) public returns (bool) {
-        return daiContract.transferFrom(msg.sender, dst, wad);
+    function payOrder(uint wad) public returns (bool) {
+        return daiContract.transferFrom(msg.sender, address(this), wad);
     }
 
     // DAI Contract approve wrapper

@@ -9,7 +9,10 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
+        // Fork of ETH mainnet
         url: process.env.ALCHEMY_MAINNET_URL || '',
+        // Fix blockchain state forking at 2023-04-07 17:19:47 UTC for testing reasons
+        blockNumber: 16998046,
       }
     }
   }
