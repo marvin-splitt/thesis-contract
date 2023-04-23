@@ -67,11 +67,6 @@ contract RefundContract {
         return daiContract.transferFrom(msg.sender, address(this), wad);
     }
 
-    // DAI Contract approve wrapper
-    function approveDai(address guy, uint wad) public returns (bool) {
-        return daiContract.approve(guy, wad);
-    }
-
     function addDeliveryPartner(address deliveryPartner) public onlyOwner {
         deliveryPartners.push(deliveryPartner);
         emit DeliveryPartnerAdded(deliveryPartner);

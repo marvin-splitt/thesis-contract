@@ -1,10 +1,13 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 
 const daiAbi = [
   "function approve(address spender, uint256 amount) external returns (bool)",
   "function balanceOf(address account) external view returns (uint256)",
+  "function transfer(address recipient, uint256 amount) external returns (bool)",
+  "function transferFrom(address sender, address recipient, uint256 amount) external returns (bool)",
+  "function allowance(address owner, address spender) external view returns (uint256)",
 ]
 
 const deployFixture = async () => {
@@ -27,7 +30,14 @@ const deployFixture = async () => {
     await addedDeliveryPartner.getAddress()
   );
 
-  return { refundContract, admin, customer, deliveryPartner, orderReceipt, addedDeliveryPartner };
+  // setup customers wallet
+  await network.provider.send("hardhat_impersonateAccount", [process.env.DAI_IMPERSONATE_ACCOUNT_ADDRESS!]);
+  const impersonatedAccount = ethers.provider.getSigner(process.env.DAI_IMPERSONATE_ACCOUNT_ADDRESS!);
+  const daiContract = new ethers.Contract(process.env.DAI_CONTRACT_ADDRESS!, daiAbi, impersonatedAccount);
+  // send 1000 dai to customer
+  await daiContract.connect(impersonatedAccount).transfer(await customer.getAddress(), ethers.utils.parseEther("1000"));
+
+  return { refundContract, admin, customer, deliveryPartner, orderReceipt, addedDeliveryPartner, daiContract };
 };
 
 describe("RefundContract", () => {
@@ -46,7 +56,7 @@ describe("RefundContract", () => {
   });
 
 
-  describe("Setup", () => {
+  describe("Setup Contract", () => {
     it("Should reject adding delivery partner if not owner", async () => {
       const { refundContract, customer, deliveryPartner } = await loadFixture(
         deployFixture
@@ -83,6 +93,27 @@ describe("RefundContract", () => {
       ).to.emit(refundContract, "DeliveryPartnerAdded").withArgs(
         await deliveryPartner.getAddress()
       );
+    });
+  });
+
+  describe("Setup Customers Payment", () => {
+    it("Customer should have at least 1000 DAI", async () => {
+      const { daiContract, customer } = await loadFixture(deployFixture);
+      expect(await daiContract.balanceOf(await customer.getAddress())).to.greaterThanOrEqual(ethers.utils.parseEther("1000"));
+    });
+
+    it("Customer should approve the contract to spend DAI", async () => {
+      const { refundContract, customer, daiContract } = await loadFixture(deployFixture);
+
+      await daiContract.connect(customer).approve(refundContract.address, ethers.utils.parseEther("100"));
+      expect(await daiContract.allowance(await customer.getAddress(), refundContract.address)).to.equal(ethers.utils.parseEther("100"));
+    });
+
+    it("Contract should transfer DAI from the customers wallet to the contract", async () => {
+      const { refundContract, customer, daiContract } = await loadFixture(deployFixture);
+      await daiContract.connect(customer).approve(refundContract.address, ethers.utils.parseEther("100"));
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"));
+      expect(await daiContract.balanceOf(refundContract.address)).to.equal(ethers.utils.parseEther("100"));
     });
   });
 
