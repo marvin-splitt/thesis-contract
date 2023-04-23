@@ -51,6 +51,9 @@ contract RefundContract {
 
     mapping(uint => Order) private orders;
 
+    // event to be emitted when a delivery partner is added
+    event DeliveryPartnerAdded(address deliveryPartner);
+
     // event to be emitted when an order is created
     event OrderCreated(
         uint orderId,
@@ -71,6 +74,7 @@ contract RefundContract {
 
     function addDeliveryPartner(address deliveryPartner) public onlyOwner {
         deliveryPartners.push(deliveryPartner);
+        emit DeliveryPartnerAdded(deliveryPartner);
     }
 
     function isDeliveryPartner(

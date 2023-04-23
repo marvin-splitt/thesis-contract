@@ -47,8 +47,7 @@ describe("RefundContract", () => {
 
 
   describe("Setup", () => {
-
-    it("Should allow only the owner to setup delivery partner", async () => {
+    it("Should reject adding delivery partner if not owner", async () => {
       const { refundContract, customer, deliveryPartner } = await loadFixture(
         deployFixture
       );
@@ -71,6 +70,19 @@ describe("RefundContract", () => {
           await deliveryPartner.getAddress()
         )
       ).to.be.true;
+    });
+
+    it("Should emit a DeliveryPartnerAdded event", async () => {
+      const { refundContract, deliveryPartner } = await loadFixture(
+        deployFixture
+      );
+      await expect(
+        refundContract.addDeliveryPartner(
+          await deliveryPartner.getAddress()
+        )
+      ).to.emit(refundContract, "DeliveryPartnerAdded").withArgs(
+        await deliveryPartner.getAddress()
+      );
     });
   });
 
