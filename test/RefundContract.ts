@@ -36,6 +36,7 @@ const deployFixture = async () => {
   const daiContract = new ethers.Contract(process.env.DAI_CONTRACT_ADDRESS!, daiAbi, impersonatedAccount);
   // send 1000 dai to customer
   await daiContract.connect(impersonatedAccount).transfer(await customer.getAddress(), ethers.utils.parseEther("1000"));
+  await daiContract.connect(customer).approve(refundContract.address, ethers.utils.parseEther("100"));
 
   return { refundContract, admin, customer, deliveryPartner, orderReceipt, addedDeliveryPartner, daiContract };
 };
@@ -105,14 +106,14 @@ describe("RefundContract", () => {
     it("Customer should approve the contract to spend DAI", async () => {
       const { refundContract, customer, daiContract } = await loadFixture(deployFixture);
 
-      await daiContract.connect(customer).approve(refundContract.address, ethers.utils.parseEther("100"));
       expect(await daiContract.allowance(await customer.getAddress(), refundContract.address)).to.equal(ethers.utils.parseEther("100"));
     });
 
     it("Contract should transfer DAI from the customers wallet to the contract", async () => {
-      const { refundContract, customer, daiContract } = await loadFixture(deployFixture);
-      await daiContract.connect(customer).approve(refundContract.address, ethers.utils.parseEther("100"));
-      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"));
+      const { refundContract, customer, daiContract, orderReceipt } = await loadFixture(deployFixture);
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
       expect(await daiContract.balanceOf(refundContract.address)).to.equal(ethers.utils.parseEther("100"));
     });
   });
@@ -236,5 +237,25 @@ describe("RefundContract", () => {
 
     });
   });
+
+  describe("Payments", () => {
+    it("Should mark an order as paid", async () => {
+      const { refundContract, customer, orderReceipt } = await loadFixture(
+        deployFixture
+      );
+
+      const event = orderReceipt.events?.[0];
+      const args = event?.args;
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), args?.orderId);
+
+      const order = await refundContract.getOrder(args?.orderId);
+      expect(order.status).to.equal(1);
+    });
+  });
+
+  xdescribe("Owner Withdrawals", () => { });
+
+  xdescribe("Refunds", () => { })
 
 });
