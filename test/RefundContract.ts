@@ -267,6 +267,16 @@ describe("RefundContract", () => {
         refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId)
       ).to.be.revertedWith("Order must be marked as unpaid to be paid");
     });
+
+    it("Shoud reject payments if the order does not exist", async () => {
+      const { refundContract, customer } = await loadFixture(
+        deployFixture
+      );
+
+      await expect(
+        refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), 100000000000)
+      ).to.be.revertedWith("Order does not exist");
+    });
   });
 
   xdescribe("Owner Withdrawals", () => { });

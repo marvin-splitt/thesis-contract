@@ -64,6 +64,13 @@ contract RefundContract {
 
     // DAI Contract transferFrom wrapper
     function payOrder(uint wad, uint orderId) public returns (bool) {
+        require(wad > 0, "Amount must be greater than 0");
+        require(orderId > 0, "Order ID must be greater than 0");
+        require(orders[orderId].customer != address(0), "Order does not exist");
+        require(
+            orders[orderId].customer == msg.sender,
+            "Only the customer can pay for the order"
+        );
         require(
             orders[orderId].status == Status.CREATED,
             "Order must be marked as unpaid to be paid"
