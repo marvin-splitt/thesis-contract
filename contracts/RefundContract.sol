@@ -75,6 +75,10 @@ contract RefundContract {
             orders[orderId].status == Status.CREATED,
             "Order must be marked as unpaid to be paid"
         );
+        require(
+            wad == orders[orderId].amount,
+            "Payment amount must match order amount"
+        );
         daiContract.transferFrom(msg.sender, address(this), wad);
         orders[orderId].status = Status.PAID;
         return true;

@@ -21,7 +21,7 @@ const deployFixture = async () => {
     .connect(admin)
     .createOrder(
       await customer.getAddress(),
-      100
+      ethers.utils.parseEther("100"),
     )
 
   const orderReceipt = await orderRes.wait();
@@ -129,7 +129,7 @@ describe("RefundContract", () => {
           .connect(customer)
           .createOrder(
             await customer.getAddress(),
-            100
+            ethers.utils.parseEther("100")
           )
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
@@ -157,7 +157,7 @@ describe("RefundContract", () => {
           .connect(admin)
           .createOrder(
             await customer.getAddress(),
-            100
+            ethers.utils.parseEther("100")
           )
       ).to.emit(refundContract, "OrderCreated");
     })
@@ -185,7 +185,7 @@ describe("RefundContract", () => {
       const args = event?.args;
 
       const order = await refundContract.getOrder(args?.orderId);
-      expect(order.amount).to.equal(100);
+      expect(order.amount).to.equal(ethers.utils.parseEther("100"));
       expect(order.status).to.equal(0);
       expect(order.customer).to.equal(await customer.getAddress());
     });
@@ -276,6 +276,18 @@ describe("RefundContract", () => {
       await expect(
         refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), 100000000000)
       ).to.be.revertedWith("Order does not exist");
+    });
+
+    it("Should reject payments if the order is not paid with the correct amount", async () => {
+      const { refundContract, customer, orderReceipt } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await expect(
+        refundContract.connect(customer).payOrder(ethers.utils.parseEther("10"), orderId)
+      ).to.be.revertedWith("Payment amount must match order amount");
     });
   });
 
