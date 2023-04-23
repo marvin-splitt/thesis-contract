@@ -244,13 +244,28 @@ describe("RefundContract", () => {
         deployFixture
       );
 
-      const event = orderReceipt.events?.[0];
-      const args = event?.args;
+      const orderId = orderReceipt.events![0].args![0];
 
-      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), args?.orderId);
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
 
-      const order = await refundContract.getOrder(args?.orderId);
+      const order = await refundContract.getOrder(orderId);
       expect(order.status).to.equal(1);
+    });
+
+    it("Should reject payments if the order is already paid", async () => {
+      const { refundContract, customer, orderReceipt, daiContract } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+
+      await daiContract.connect(customer).approve(refundContract.address, ethers.utils.parseEther("100"));
+
+      await expect(
+        refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId)
+      ).to.be.revertedWith("Order must be marked as unpaid to be paid");
     });
   });
 

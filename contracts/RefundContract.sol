@@ -64,6 +64,10 @@ contract RefundContract {
 
     // DAI Contract transferFrom wrapper
     function payOrder(uint wad, uint orderId) public returns (bool) {
+        require(
+            orders[orderId].status == Status.CREATED,
+            "Order must be marked as unpaid to be paid"
+        );
         daiContract.transferFrom(msg.sender, address(this), wad);
         orders[orderId].status = Status.PAID;
         return true;
