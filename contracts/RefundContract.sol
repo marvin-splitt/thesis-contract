@@ -63,8 +63,10 @@ contract RefundContract {
     );
 
     // DAI Contract transferFrom wrapper
-    function payOrder(uint wad) public returns (bool) {
-        return daiContract.transferFrom(msg.sender, address(this), wad);
+    function payOrder(uint wad, uint orderId) public returns (bool) {
+        daiContract.transferFrom(msg.sender, address(this), wad);
+        orders[orderId].status = Status.PAID;
+        return true;
     }
 
     function addDeliveryPartner(address deliveryPartner) public onlyOwner {
