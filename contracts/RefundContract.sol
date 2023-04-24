@@ -62,6 +62,15 @@ contract RefundContract {
         Status status
     );
 
+    event OrderPaid(uint orderId, address customer, uint amount, Status status);
+
+    event OrderShipped(
+        uint orderId,
+        address customer,
+        uint amount,
+        Status status
+    );
+
     // DAI Contract transferFrom wrapper
     function payOrder(uint wad, uint orderId) public returns (bool) {
         require(wad > 0, "Amount must be greater than 0");
@@ -81,6 +90,7 @@ contract RefundContract {
         );
         daiContract.transferFrom(msg.sender, address(this), wad);
         orders[orderId].status = Status.PAID;
+        emit OrderPaid(orderId, msg.sender, wad, Status.PAID);
         return true;
     }
 

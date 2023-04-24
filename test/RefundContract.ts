@@ -289,6 +289,19 @@ describe("RefundContract", () => {
         refundContract.connect(customer).payOrder(ethers.utils.parseEther("10"), orderId)
       ).to.be.revertedWith("Payment amount must match order amount");
     });
+
+
+    it("Should emit a OrderPaid event", async () => {
+      const { refundContract, customer, orderReceipt } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await expect(
+        refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId)
+      ).to.emit(refundContract, "OrderPaid").withArgs(orderId, await customer.getAddress(), ethers.utils.parseEther("100"), 1);
+    })
   });
 
   xdescribe("Owner Withdrawals", () => { });
