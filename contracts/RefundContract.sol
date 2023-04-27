@@ -7,6 +7,8 @@ pragma solidity ^0.8.17;
 interface DaiContract {
     function approve(address guy, uint wad) external returns (bool);
 
+    function transfer(address dst, uint wad) external returns (bool);
+
     function transferFrom(
         address src,
         address dst,
@@ -18,11 +20,20 @@ contract RefundContract {
     DaiContract public daiContract;
     address public owner;
     uint private orderCounter;
+    uint private refundDuration;
     // array of delivery partner addresses
     address[] private deliveryPartners;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Ownable: caller is not the owner");
+        _;
+    }
+
+    modifier onlyDeliveryPartner() {
+        require(
+            isDeliveryPartner(msg.sender),
+            "Only delivery partners can call this function"
+        );
         _;
     }
 
@@ -35,9 +46,10 @@ contract RefundContract {
         REFUNDED
     }
 
-    constructor(address daiContractAddress) {
+    constructor(address daiContractAddress, uint refundDuration_) {
         daiContract = DaiContract(daiContractAddress);
         owner = msg.sender;
+        refundDuration = refundDuration_ * 1 days;
     }
 
     // struct to store order details
@@ -47,6 +59,9 @@ contract RefundContract {
         uint amount;
         Status status;
         string externalOrderNumber;
+        uint createdAt;
+        uint returnedAt;
+        uint refundedAt;
     }
 
     mapping(uint => Order) private orders;
@@ -65,6 +80,27 @@ contract RefundContract {
     event OrderPaid(uint orderId, address customer, uint amount, Status status);
 
     event OrderShipped(
+        uint orderId,
+        address customer,
+        uint amount,
+        Status status
+    );
+
+    event OrderDelivered(
+        uint orderId,
+        address customer,
+        uint amount,
+        Status status
+    );
+
+    event OrderReturned(
+        uint orderId,
+        address customer,
+        uint amount,
+        Status status
+    );
+
+    event OrderRefunded(
         uint orderId,
         address customer,
         uint amount,
@@ -110,7 +146,11 @@ contract RefundContract {
         return false;
     }
 
-    function createOrder(address customer, uint amount) public onlyOwner {
+    function createOrder(
+        address customer,
+        uint amount,
+        string memory orderNumber
+    ) public onlyOwner {
         require(amount > 0, "Amount must be greater than 0");
         orderCounter++;
         orders[orderCounter] = Order(
@@ -118,7 +158,10 @@ contract RefundContract {
             customer,
             amount,
             Status.CREATED,
-            ""
+            orderNumber,
+            block.timestamp,
+            0,
+            0
         );
         emit OrderCreated(orderCounter, customer, amount, Status.CREATED);
     }
@@ -129,17 +172,54 @@ contract RefundContract {
         return orders[orderId];
     }
 
-    function markOrderAsShipped(uint orderId) public {
-        require(
-            isDeliveryPartner(msg.sender),
-            "Only delivery partners can call this function"
-        );
+    function markOrderAsShipped(uint orderId) public onlyDeliveryPartner {
         Order storage order = orders[orderId];
         require(
             order.status == Status.PAID,
             "Order must be marked as paid to be shipped"
         );
         order.status = Status.SHIPPED;
+        orders[orderId] = order;
+    }
+
+    function markOrderAsDelivered(uint orderId) public onlyDeliveryPartner {
+        Order storage order = orders[orderId];
+        require(
+            order.status == Status.SHIPPED,
+            "Order must be marked as shipped to be delivered"
+        );
+        order.status = Status.DELIVERED;
+        orders[orderId] = order;
+    }
+
+    function markOrderAsReturned(uint orderId) public onlyDeliveryPartner {
+        Order storage order = orders[orderId];
+        require(
+            order.status == Status.DELIVERED,
+            "Order must be marked as delivered to be returned"
+        );
+        require(
+            block.timestamp - order.createdAt <= refundDuration,
+            "Order must be returned within the refund duration"
+        );
+        order.status = Status.RETURNED;
+        order.returnedAt = block.timestamp;
+        orders[orderId] = order;
+    }
+
+    function refundOrder(uint orderId) public {
+        Order storage order = orders[orderId];
+        require(
+            order.status == Status.RETURNED,
+            "Order must be marked as returned to be refunded"
+        );
+        require(
+            msg.sender == order.customer,
+            "Only the customer can refund the order"
+        );
+        daiContract.transfer(order.customer, order.amount);
+        order.status = Status.REFUNDED;
+        order.refundedAt = block.timestamp;
         orders[orderId] = order;
     }
 }
