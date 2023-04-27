@@ -13,7 +13,7 @@ const daiAbi = [
 const deployFixture = async () => {
 
   const RefundContract = await ethers.getContractFactory("RefundContract");
-  const refundContract = await RefundContract.deploy(process.env.DAI_CONTRACT_ADDRESS!);
+  const refundContract = await RefundContract.deploy(process.env.DAI_CONTRACT_ADDRESS!, 14);
   const [admin, customer, deliveryPartner, addedDeliveryPartner] = await ethers.getSigners();
   await refundContract.deployed();
 
@@ -22,6 +22,7 @@ const deployFixture = async () => {
     .createOrder(
       await customer.getAddress(),
       ethers.utils.parseEther("100"),
+      '10000001'
     )
 
   const orderReceipt = await orderRes.wait();
@@ -55,7 +56,6 @@ describe("RefundContract", () => {
     });
 
   });
-
 
   describe("Setup Contract", () => {
     it("Should reject adding delivery partner if not owner", async () => {
@@ -129,7 +129,8 @@ describe("RefundContract", () => {
           .connect(customer)
           .createOrder(
             await customer.getAddress(),
-            ethers.utils.parseEther("100")
+            ethers.utils.parseEther("100"),
+            '10000001'
           )
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
@@ -143,7 +144,8 @@ describe("RefundContract", () => {
           .connect(admin)
           .createOrder(
             await customer.getAddress(),
-            0
+            0,
+            '10000001'
           )
       ).to.be.revertedWith("Amount must be greater than 0");
     });
@@ -157,7 +159,8 @@ describe("RefundContract", () => {
           .connect(admin)
           .createOrder(
             await customer.getAddress(),
-            ethers.utils.parseEther("100")
+            ethers.utils.parseEther("100"),
+            '10000001'
           )
       ).to.emit(refundContract, "OrderCreated");
     })
@@ -304,8 +307,8 @@ describe("RefundContract", () => {
     })
   });
 
-  xdescribe("Owner Withdrawals", () => { });
-
   xdescribe("Refunds", () => { })
+
+  xdescribe("Owner Withdrawals", () => { });
 
 });
