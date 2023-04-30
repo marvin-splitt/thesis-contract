@@ -493,6 +493,20 @@ describe("RefundContract", () => {
       expect(order.status).to.equal(5);
     })
 
+    it("Should reject to refund an order if the order is not returned", async () => {
+      const { refundContract, customer, orderReceipt } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+
+      await expect(
+        refundContract.connect(customer).refundOrder(orderId)
+      ).to.be.revertedWith("Order must be marked as returned to be refunded");
+    })
+
   })
 
   xdescribe("Owner Withdrawals", () => { });
