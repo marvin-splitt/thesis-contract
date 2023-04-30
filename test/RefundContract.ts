@@ -475,6 +475,23 @@ describe("RefundContract", () => {
       ).to.be.revertedWith("Order has already been returned");
     })
 
+    it("Should add a time stamp to the order when it is marked as returned", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId);
+
+      const order = await refundContract.getOrder(orderId);
+      expect(order.returnedAt).to.be.at.least(1);
+    })
+
+
     it("Should emit a OrderReturned event", async () => {
       const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
         deployFixture
