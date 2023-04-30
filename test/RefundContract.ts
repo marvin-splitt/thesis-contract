@@ -664,26 +664,8 @@ describe("RefundContract", () => {
     })
   })
 
-  describe("Owner Withdrawals", () => {
-
-    it("Should reject to withdraw the owner balance if the caller is not the owner", async () => {
-      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
-        deployFixture
-      );
-
-      const orderId = orderReceipt.events![0].args![0];
-
-      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
-      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
-      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
-      await refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId);
-
-      await expect(
-        refundContract.connect(addedDeliveryPartner).withdrawOwnerBalance()
-      ).to.be.revertedWith("Ownable: caller is not the owner");
-    })
-
-    it("Should return the correct owner withdraw balance", async () => {
+  describe('Updating Owner Balance', () => {
+    it("Should update to the correct owner withdraw balance", async () => {
 
       const { refundContract, customer, orderReceipt, addedDeliveryPartner, daiContract, admin } = await loadFixture(
         deployFixture
@@ -703,6 +685,46 @@ describe("RefundContract", () => {
       await refundContract.connect(admin).updateOwnersBalance()
 
       expect(await refundContract.getOwnersBalance()).to.equal(orderPrice);
+    })
+
+    it("Should emit an OrderClosed event", async () => {
+
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner, admin } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+      const orderPrice = ethers.utils.parseEther("100");
+
+      await refundContract.connect(customer).payOrder(orderPrice, orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+
+      // Increase time by 14 days and 1 second to simulate the refund period has expired
+      await ethers.provider.send("evm_increaseTime", [60 * 60 * 24 * 14 + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      expect(await refundContract.connect(admin).updateOwnersBalance()).to.emit(refundContract, "OrderClosed").withArgs(orderId);
+    })
+  });
+
+  describe("Owner Withdrawals", () => {
+
+    it("Should reject to withdraw the owner balance if the caller is not the owner", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId);
+
+      await expect(
+        refundContract.connect(addedDeliveryPartner).withdrawOwnerBalance()
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     })
 
     it("Should withdraw the correct amount to the owner", async () => {
