@@ -428,6 +428,16 @@ describe("RefundContract", () => {
       ).to.be.revertedWith("Only delivery partners can call this function");
     })
 
+    it("Should reject to mark an order as returned if the order does not exist", async () => {
+      const { refundContract, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      await expect(
+        refundContract.connect(addedDeliveryPartner).markOrderAsReturned(100000000000)
+      ).to.be.revertedWith("Order does not exist");
+    })
+
   })
 
   xdescribe("Refunds", () => { })
