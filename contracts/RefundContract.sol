@@ -138,6 +138,10 @@ contract RefundContract {
         Status status
     );
 
+    event OrderClosed(uint orderId);
+
+    event OwnerBalanceWithdrawn(address owner, uint amount);
+
     // DAI Contract transferFrom wrapper
     function payOrder(uint wad, uint orderId) public returns (bool) {
         require(wad > 0, "Amount must be greater than 0");
@@ -302,6 +306,7 @@ contract RefundContract {
                 orders[order.orderId].closedAt = block.timestamp;
                 _ownerBalance += order.amount;
                 removeOpenOrderEntry(i);
+                emit OrderClosed(order.orderId);
             }
         }
     }
@@ -317,6 +322,7 @@ contract RefundContract {
     function withdrawOwnerBalance() public onlyOwner {
         require(_ownerBalance > 0, "Owner balance must be greater than 0");
         daiContract.transfer(owner, _ownerBalance);
+        emit OwnerBalanceWithdrawn(owner, _ownerBalance);
         _ownerBalance = 0;
     }
 }

@@ -696,7 +696,6 @@ describe("RefundContract", () => {
       await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
       await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
 
-
       // Increase time by 14 days and 1 second to simulate the refund period has expired
       await ethers.provider.send("evm_increaseTime", [60 * 60 * 24 * 14 + 1]);
       await ethers.provider.send("evm_mine", []);
@@ -706,5 +705,51 @@ describe("RefundContract", () => {
       expect(await refundContract.getOwnersBalance()).to.equal(orderPrice);
     })
 
+    it("Should withdraw the correct amount to the owner", async () => {
+
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner, daiContract, admin } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+      const orderPrice = ethers.utils.parseEther("100");
+      const ownersDaiBalance = await daiContract.balanceOf(await admin.getAddress());
+
+      await refundContract.connect(customer).payOrder(orderPrice, orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+
+      // Increase time by 14 days and 1 second to simulate the refund period has expired
+      await ethers.provider.send("evm_increaseTime", [60 * 60 * 24 * 14 + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await refundContract.connect(admin).updateOwnersBalance()
+      await refundContract.connect(admin).withdrawOwnerBalance()
+
+      expect(await daiContract.balanceOf(await admin.getAddress())).to.equal(ownersDaiBalance.add(orderPrice));
+    })
+
+    it("Should emit a OwnerBalanceWithdrawn event", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner, admin } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+      const orderPrice = ethers.utils.parseEther("100");
+
+      await refundContract.connect(customer).payOrder(orderPrice, orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+
+      // Increase time by 14 days and 1 second to simulate the refund period has expired
+      await ethers.provider.send("evm_increaseTime", [60 * 60 * 24 * 14 + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await refundContract.connect(admin).updateOwnersBalance()
+
+      await expect(
+        refundContract.connect(admin).withdrawOwnerBalance()
+      ).to.emit(refundContract, "OwnerBalanceWithdrawn").withArgs(await admin.getAddress(), orderPrice);
+    })
   });
 });
