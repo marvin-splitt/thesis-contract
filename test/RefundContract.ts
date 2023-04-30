@@ -493,18 +493,19 @@ describe("RefundContract", () => {
       expect(order.status).to.equal(5);
     })
 
-    it("Should reject to refund an order if the order is not returned", async () => {
-      const { refundContract, customer, orderReceipt } = await loadFixture(
+    it("Should reject to refund an order if the order is already shipped", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
         deployFixture
       );
 
       const orderId = orderReceipt.events![0].args![0];
 
       await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
 
       await expect(
         refundContract.connect(customer).refundOrder(orderId)
-      ).to.be.revertedWith("Order must be marked as returned to be refunded");
+      ).to.be.revertedWith("Order must be marked as returned or paid to be refunded");
     })
 
     it("Should reject to refund an order if the caller is not the customer", async () => {
@@ -532,6 +533,26 @@ describe("RefundContract", () => {
       await expect(
         refundContract.connect(customer).refundOrder(100000000000)
       ).to.be.revertedWith("Order does not exist");
+    })
+
+    it("Should reject to refund an order if the orders refund period of 14 days has expired", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId);
+
+      await ethers.provider.send("evm_increaseTime", [60 * 60 * 24 * 14 + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        refundContract.connect(customer).refundOrder(orderId)
+      ).to.be.revertedWith("Order refund period has expired");
     })
 
   })

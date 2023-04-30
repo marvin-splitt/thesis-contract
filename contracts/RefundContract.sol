@@ -220,12 +220,16 @@ contract RefundContract {
         Order storage order = orders[orderId];
         require(order.customer != address(0), "Order does not exist");
         require(
-            order.status == Status.RETURNED,
-            "Order must be marked as returned to be refunded"
+            order.status == Status.RETURNED || order.status == Status.PAID,
+            "Order must be marked as returned or paid to be refunded"
         );
         require(
             msg.sender == order.customer,
             "Orders can only be refunded by the customer"
+        );
+        require(
+            block.timestamp - order.returnedAt <= refundDuration,
+            "Order refund period has expired"
         );
         daiContract.transfer(order.customer, order.amount);
         order.status = Status.REFUNDED;
