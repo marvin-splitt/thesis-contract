@@ -290,12 +290,12 @@ contract RefundContract {
         );
     }
 
-    function getOwnersBalance() public onlyOwner returns (uint) {
+    function updateOwnersBalance() public onlyOwner {
         for (uint i = 0; i < openOrders.length; i++) {
             Order memory order = orders[openOrders[i]];
             if (
-                order.createdAt + refundDuration > block.timestamp &&
-                order.status == Status.PAID &&
+                order.createdAt + refundDuration < block.timestamp &&
+                order.status == Status.DELIVERED &&
                 order.refundedAt == 0 &&
                 order.returnedAt == 0
             ) {
@@ -304,6 +304,9 @@ contract RefundContract {
                 removeOpenOrderEntry(i);
             }
         }
+    }
+
+    function getOwnersBalance() public view onlyOwner returns (uint) {
         return _ownerBalance;
     }
 
