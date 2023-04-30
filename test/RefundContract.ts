@@ -457,6 +457,21 @@ describe("RefundContract", () => {
       ).to.be.revertedWith("Order refund period has expired");
     })
 
+    it("Should emit a OrderReturned event", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+
+      await expect(
+        refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId)
+      ).to.emit(refundContract, "OrderReturned").withArgs(orderId, await customer.getAddress(), await addedDeliveryPartner.getAddress(), 4);
+    })
   })
 
   xdescribe("Refunds", () => { })
