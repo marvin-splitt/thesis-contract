@@ -438,6 +438,25 @@ describe("RefundContract", () => {
       ).to.be.revertedWith("Order does not exist");
     })
 
+    it("Should reject to mark an order as returned if the orders refund period of 14 days has expired", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+
+      await ethers.provider.send("evm_increaseTime", [60 * 60 * 24 * 14 + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId)
+      ).to.be.revertedWith("Order refund period has expired");
+    })
+
   })
 
   xdescribe("Refunds", () => { })
