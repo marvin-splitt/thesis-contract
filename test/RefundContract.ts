@@ -798,5 +798,15 @@ describe("RefundContract", () => {
         await refundContract.connect(admin).getOwnersBalance()
       ).to.equal(0);
     })
+
+    it("Should reject to withdraw the owner balance if the owner balance is 0", async () => {
+      const { refundContract, admin } = await loadFixture(
+        deployFixture
+      );
+
+      await expect(
+        refundContract.connect(admin).withdrawOwnerBalance()
+      ).to.be.revertedWith("Owner balance must be greater than 0");
+    })
   });
 });
