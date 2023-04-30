@@ -235,5 +235,11 @@ contract RefundContract {
         order.status = Status.REFUNDED;
         order.refundedAt = block.timestamp;
         orders[orderId] = order;
+        emit OrderRefunded(
+            orderId,
+            order.customer,
+            order.amount,
+            Status.REFUNDED
+        );
     }
 }
