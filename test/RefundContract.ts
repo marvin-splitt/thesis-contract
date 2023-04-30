@@ -412,6 +412,22 @@ describe("RefundContract", () => {
       ).to.be.revertedWith("Order must be marked as delivered to be returned");
     })
 
+    it("Should reject to mark an order as returned if the caller is not a delivery partner", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+
+      await expect(
+        refundContract.connect(customer).markOrderAsReturned(orderId)
+      ).to.be.revertedWith("Only delivery partners can call this function");
+    })
+
   })
 
   xdescribe("Refunds", () => { })
