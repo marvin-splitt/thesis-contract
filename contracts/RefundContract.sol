@@ -19,10 +19,10 @@ interface DaiContract {
 contract RefundContract {
     DaiContract public daiContract;
     address public owner;
-    uint private orderCounter;
-    uint private refundDuration;
+    uint public refundDuration;
+    uint private _orderCounter;
     // array of delivery partner addresses
-    address[] private deliveryPartners;
+    address[] private _deliveryPartners;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Ownable: caller is not the owner");
@@ -82,21 +82,21 @@ contract RefundContract {
     event OrderShipped(
         uint orderId,
         address customer,
-        uint amount,
+        address deliveryPartner,
         Status status
     );
 
     event OrderDelivered(
         uint orderId,
         address customer,
-        uint amount,
+        address deliveryPartner,
         Status status
     );
 
     event OrderReturned(
         uint orderId,
         address customer,
-        uint amount,
+        address deliveryPartner,
         Status status
     );
 
@@ -131,15 +131,15 @@ contract RefundContract {
     }
 
     function addDeliveryPartner(address deliveryPartner) public onlyOwner {
-        deliveryPartners.push(deliveryPartner);
+        _deliveryPartners.push(deliveryPartner);
         emit DeliveryPartnerAdded(deliveryPartner);
     }
 
     function isDeliveryPartner(
         address deliveryPartner
     ) public view returns (bool) {
-        for (uint i = 0; i < deliveryPartners.length; i++) {
-            if (deliveryPartners[i] == deliveryPartner) {
+        for (uint i = 0; i < _deliveryPartners.length; i++) {
+            if (_deliveryPartners[i] == deliveryPartner) {
                 return true;
             }
         }
@@ -152,9 +152,9 @@ contract RefundContract {
         string memory orderNumber
     ) public onlyOwner {
         require(amount > 0, "Amount must be greater than 0");
-        orderCounter++;
-        orders[orderCounter] = Order(
-            orderCounter,
+        _orderCounter++;
+        orders[_orderCounter] = Order(
+            _orderCounter,
             customer,
             amount,
             Status.CREATED,
@@ -163,7 +163,7 @@ contract RefundContract {
             0,
             0
         );
-        emit OrderCreated(orderCounter, customer, amount, Status.CREATED);
+        emit OrderCreated(_orderCounter, customer, amount, Status.CREATED);
     }
 
     function getOrder(
@@ -174,12 +174,14 @@ contract RefundContract {
 
     function markOrderAsShipped(uint orderId) public onlyDeliveryPartner {
         Order storage order = orders[orderId];
+        require(order.customer != address(0), "Order does not exist");
         require(
             order.status == Status.PAID,
             "Order must be marked as paid to be shipped"
         );
         order.status = Status.SHIPPED;
         orders[orderId] = order;
+        emit OrderShipped(orderId, order.customer, msg.sender, Status.SHIPPED);
     }
 
     function markOrderAsDelivered(uint orderId) public onlyDeliveryPartner {

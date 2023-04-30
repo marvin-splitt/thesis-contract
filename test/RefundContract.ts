@@ -55,6 +55,12 @@ describe("RefundContract", () => {
       expect(await refundContract.daiContract()).to.equal(process.env.DAI_CONTRACT_ADDRESS);
     });
 
+    it("Should deploy the contract with the correct refund duration", async () => {
+      const { refundContract } = await loadFixture(deployFixture);
+      // refund duration is 14 days in seconds
+      expect(await refundContract.refundDuration()).to.equal(14 * 24 * 60 * 60);
+    });
+
   });
 
   describe("Setup Contract", () => {
@@ -271,7 +277,7 @@ describe("RefundContract", () => {
       ).to.be.revertedWith("Order must be marked as unpaid to be paid");
     });
 
-    it("Shoud reject payments if the order does not exist", async () => {
+    it("Should reject payments if the order does not exist", async () => {
       const { refundContract, customer } = await loadFixture(
         deployFixture
       );
@@ -306,6 +312,72 @@ describe("RefundContract", () => {
       ).to.emit(refundContract, "OrderPaid").withArgs(orderId, await customer.getAddress(), ethers.utils.parseEther("100"), 1);
     })
   });
+
+  describe("Delivery", () => {
+    it("Should mark an order as shipped", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+
+      const order = await refundContract.getOrder(orderId);
+      expect(order.status).to.equal(2);
+    })
+
+    it("Should reject to mark an order as shipped if the order is not paid", async () => {
+      const { refundContract, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await expect(
+        refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId)
+      ).to.be.revertedWith("Order must be marked as paid to be shipped");
+    })
+
+    it("Should reject to mark an order as shipped if the caller is not a delivery partner", async () => {
+      const { refundContract, customer, orderReceipt } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+
+      await expect(
+        refundContract.connect(customer).markOrderAsShipped(orderId)
+      ).to.be.revertedWith("Only delivery partners can call this function");
+    })
+
+    it("Should reject to mark an order as shipped if the order does not exist", async () => {
+      const { refundContract, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      await expect(
+        refundContract.connect(addedDeliveryPartner).markOrderAsShipped(100000000000)
+      ).to.be.revertedWith("Order does not exist");
+    })
+
+    it("Should emit a OrderShipped event", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+
+      await expect(
+        refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId)
+      ).to.emit(refundContract, "OrderShipped").withArgs(orderId, await customer.getAddress(), await addedDeliveryPartner.getAddress(), 2);
+    })
+  })
 
   xdescribe("Refunds", () => { })
 
