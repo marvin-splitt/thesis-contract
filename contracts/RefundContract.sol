@@ -196,17 +196,24 @@ contract RefundContract {
 
     function markOrderAsReturned(uint orderId) public onlyDeliveryPartner {
         Order storage order = orders[orderId];
+        require(order.customer != address(0), "Order does not exist");
         require(
             order.status == Status.DELIVERED,
             "Order must be marked as delivered to be returned"
         );
         require(
             block.timestamp - order.createdAt <= refundDuration,
-            "Order must be returned within the refund duration"
+            "Order refund period has expired"
         );
         order.status = Status.RETURNED;
         order.returnedAt = block.timestamp;
         orders[orderId] = order;
+        emit OrderReturned(
+            orderId,
+            order.customer,
+            msg.sender,
+            Status.RETURNED
+        );
     }
 
     function refundOrder(uint orderId) public {
