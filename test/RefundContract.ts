@@ -591,6 +591,24 @@ describe("RefundContract", () => {
       ).to.be.revertedWith("Order refund period has expired");
     })
 
+    it("Should reject to refund an order if the order has already been refunded", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId);
+      await refundContract.connect(customer).refundOrder(orderId);
+
+      await expect(
+        refundContract.connect(customer).refundOrder(orderId)
+      ).to.be.revertedWith("Order has already been refunded");
+    })
+
     it("Should emit a OrderRefunded event", async () => {
       const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
         deployFixture

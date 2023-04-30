@@ -225,6 +225,9 @@ contract RefundContract {
     function refundOrder(uint orderId) public {
         Order storage order = orders[orderId];
         require(order.customer != address(0), "Order does not exist");
+        if (order.status == Status.REFUNDED) {
+            revert("Order has already been refunded");
+        }
         require(
             order.status == Status.RETURNED || order.status == Status.PAID,
             "Order must be marked as returned or paid to be refunded"
