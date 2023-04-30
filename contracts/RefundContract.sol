@@ -224,7 +224,7 @@ contract RefundContract {
         );
         require(
             msg.sender == order.customer,
-            "Only the customer can refund the order"
+            "Orders can only be refunded by the customer"
         );
         daiContract.transfer(order.customer, order.amount);
         order.status = Status.REFUNDED;

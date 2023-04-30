@@ -507,6 +507,23 @@ describe("RefundContract", () => {
       ).to.be.revertedWith("Order must be marked as returned to be refunded");
     })
 
+    it("Should reject to refund an order if the caller is not the customer", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId);
+
+      await expect(
+        refundContract.connect(addedDeliveryPartner).refundOrder(orderId)
+      ).to.be.revertedWith("Orders can only be refunded by the customer");
+    })
+
   })
 
   xdescribe("Owner Withdrawals", () => { });
