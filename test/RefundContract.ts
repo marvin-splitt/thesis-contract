@@ -626,23 +626,6 @@ describe("RefundContract", () => {
       expect(order.refundedAt).to.be.greaterThan(0);
     })
 
-    it("Should emit a OrderRefunded event", async () => {
-      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
-        deployFixture
-      );
-
-      const orderId = orderReceipt.events![0].args![0];
-
-      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
-      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
-      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
-      await refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId);
-
-      await expect(
-        refundContract.connect(customer).refundOrder(orderId)
-      ).to.emit(refundContract, "OrderRefunded").withArgs(orderId, await customer.getAddress(), ethers.utils.parseEther("100"), 5);
-    })
-
     it("Should refund the customer the correct amount", async () => {
 
       const { refundContract, customer, orderReceipt, addedDeliveryPartner, daiContract } = await loadFixture(
@@ -663,8 +646,42 @@ describe("RefundContract", () => {
       expect(await daiContract.balanceOf(await customer.getAddress())).to.equal(customersDaiBalance);
     })
 
+    it("Should emit a OrderRefunded event", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId);
+
+      await expect(
+        refundContract.connect(customer).refundOrder(orderId)
+      ).to.emit(refundContract, "OrderRefunded").withArgs(orderId, await customer.getAddress(), ethers.utils.parseEther("100"), 5);
+    })
   })
 
-  xdescribe("Owner Withdrawals", () => { });
+  describe("Owner Withdrawals", () => {
 
+    it("Should reject to withdraw the owner balance if the caller is not the owner", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId);
+
+      await expect(
+        refundContract.connect(addedDeliveryPartner).withdrawOwnerBalance()
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    })
+
+  });
 });
