@@ -643,6 +643,26 @@ describe("RefundContract", () => {
       ).to.emit(refundContract, "OrderRefunded").withArgs(orderId, await customer.getAddress(), ethers.utils.parseEther("100"), 5);
     })
 
+    it("Should refund the customer the correct amount", async () => {
+
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner, daiContract } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+      const orderPrice = ethers.utils.parseEther("100");
+      const customersDaiBalance = await daiContract.balanceOf(await customer.getAddress());
+
+      await refundContract.connect(customer).payOrder(orderPrice, orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId);
+      await refundContract.connect(customer).refundOrder(orderId);
+
+      // TODO: Ask Marco about the fees
+      expect(await daiContract.balanceOf(await customer.getAddress())).to.equal(customersDaiBalance);
+    })
+
   })
 
   xdescribe("Owner Withdrawals", () => { });
