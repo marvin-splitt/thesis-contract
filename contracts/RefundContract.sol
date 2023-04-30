@@ -22,7 +22,9 @@ contract RefundContract {
     uint public refundDuration;
     uint private _orderCounter;
     // array of delivery partner addresses
-    address[] private _deliveryPartners;
+    address[] public deliveryPartners;
+    // amount of DAI the owner is able to withdraw
+    uint private _ownerBalance;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Ownable: caller is not the owner");
@@ -62,9 +64,38 @@ contract RefundContract {
         uint createdAt;
         uint returnedAt;
         uint refundedAt;
+        uint closedAt;
+    }
+
+    struct SearchResult {
+        uint index;
+        bool found;
     }
 
     mapping(uint => Order) private orders;
+    // Array of order ids which are not yet completly processed
+    // e.g. still in the refund period
+    uint[] private openOrders;
+
+    function removeOpenOrderEntry(uint _index) public {
+        require(_index < openOrders.length, "index out of bound");
+
+        for (uint i = _index; i < openOrders.length - 1; i++) {
+            openOrders[i] = openOrders[i + 1];
+        }
+        openOrders.pop();
+    }
+
+    function getOpenOrderIndexByOrderId(
+        uint orderId
+    ) public view returns (SearchResult memory) {
+        for (uint i = 0; i < openOrders.length; i++) {
+            if (openOrders[i] == orderId) {
+                return SearchResult(i, true);
+            }
+        }
+        return SearchResult(0, false);
+    }
 
     // event to be emitted when a delivery partner is added
     event DeliveryPartnerAdded(address deliveryPartner);
@@ -131,15 +162,15 @@ contract RefundContract {
     }
 
     function addDeliveryPartner(address deliveryPartner) public onlyOwner {
-        _deliveryPartners.push(deliveryPartner);
+        deliveryPartners.push(deliveryPartner);
         emit DeliveryPartnerAdded(deliveryPartner);
     }
 
     function isDeliveryPartner(
         address deliveryPartner
     ) public view returns (bool) {
-        for (uint i = 0; i < _deliveryPartners.length; i++) {
-            if (_deliveryPartners[i] == deliveryPartner) {
+        for (uint i = 0; i < deliveryPartners.length; i++) {
+            if (deliveryPartners[i] == deliveryPartner) {
                 return true;
             }
         }
@@ -153,7 +184,7 @@ contract RefundContract {
     ) public onlyOwner {
         require(amount > 0, "Amount must be greater than 0");
         _orderCounter++;
-        orders[_orderCounter] = Order(
+        Order memory newOrder = Order(
             _orderCounter,
             customer,
             amount,
@@ -161,8 +192,11 @@ contract RefundContract {
             orderNumber,
             block.timestamp,
             0,
+            0,
             0
         );
+        orders[_orderCounter] = newOrder;
+        openOrders.push(_orderCounter);
         emit OrderCreated(_orderCounter, customer, amount, Status.CREATED);
     }
 
@@ -197,7 +231,6 @@ contract RefundContract {
     function markOrderAsReturned(uint orderId) public onlyDeliveryPartner {
         Order storage order = orders[orderId];
         require(order.customer != address(0), "Order does not exist");
-        // if order status is returned throw error
 
         if (order.status == Status.RETURNED) {
             revert("Order has already been returned");
@@ -211,6 +244,7 @@ contract RefundContract {
             block.timestamp - order.createdAt <= refundDuration,
             "Order refund period has expired"
         );
+        require(order.closedAt == 0, "Order has already been closed");
         order.status = Status.RETURNED;
         order.returnedAt = block.timestamp;
         orders[orderId] = order;
@@ -240,15 +274,46 @@ contract RefundContract {
             block.timestamp - order.returnedAt <= refundDuration,
             "Order refund period has expired"
         );
+        require(order.closedAt == 0, "Order has already been closed");
         daiContract.transfer(order.customer, order.amount);
         order.status = Status.REFUNDED;
         order.refundedAt = block.timestamp;
         orders[orderId] = order;
+        SearchResult memory searchResult = getOpenOrderIndexByOrderId(orderId);
+        assert(searchResult.found);
+        removeOpenOrderEntry(searchResult.index);
         emit OrderRefunded(
             orderId,
             order.customer,
             order.amount,
             Status.REFUNDED
         );
+    }
+
+    function getOwnersBalance() public onlyOwner returns (uint) {
+        for (uint i = 0; i < openOrders.length; i++) {
+            Order memory order = orders[openOrders[i]];
+            if (
+                order.createdAt + refundDuration > block.timestamp &&
+                order.status == Status.PAID &&
+                order.refundedAt == 0 &&
+                order.returnedAt == 0
+            ) {
+                orders[order.orderId].closedAt = block.timestamp;
+                _ownerBalance += order.amount;
+                removeOpenOrderEntry(i);
+            }
+        }
+        return _ownerBalance;
+    }
+
+    function getOpenOrders() public view onlyOwner returns (uint[] memory) {
+        return openOrders;
+    }
+
+    function withdrawOwnerBalance() public onlyOwner {
+        require(_ownerBalance > 0, "Owner balance must be greater than 0");
+        daiContract.transfer(owner, _ownerBalance);
+        _ownerBalance = 0;
     }
 }
