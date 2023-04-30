@@ -397,6 +397,21 @@ describe("RefundContract", () => {
       expect(order.status).to.equal(4);
     })
 
+    it("Should reject to mark an order as returned if the order is not delivered", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+
+      await expect(
+        refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId)
+      ).to.be.revertedWith("Order must be marked as delivered to be returned");
+    })
+
   })
 
   xdescribe("Refunds", () => { })
