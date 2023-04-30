@@ -488,7 +488,7 @@ describe("RefundContract", () => {
       await refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId);
 
       const order = await refundContract.getOrder(orderId);
-      expect(order.returnedAt).to.be.at.least(1);
+      expect(order.returnedAt).to.be.greaterThan(0);
     })
 
 
@@ -607,6 +607,23 @@ describe("RefundContract", () => {
       await expect(
         refundContract.connect(customer).refundOrder(orderId)
       ).to.be.revertedWith("Order has already been refunded");
+    })
+
+    it("Should add a timestamp to the order when it has been refunded", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId);
+      await refundContract.connect(customer).refundOrder(orderId);
+
+      const order = await refundContract.getOrder(orderId);
+      expect(order.refundedAt).to.be.greaterThan(0);
     })
 
     it("Should emit a OrderRefunded event", async () => {
