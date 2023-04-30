@@ -474,7 +474,26 @@ describe("RefundContract", () => {
     })
   })
 
-  xdescribe("Refunds", () => { })
+  describe("Refunds", () => {
+
+    it("Should refund an order", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract.connect(customer).payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsShipped(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsDelivered(orderId);
+      await refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId);
+      await refundContract.connect(customer).refundOrder(orderId);
+
+      const order = await refundContract.getOrder(orderId);
+      expect(order.status).to.equal(5);
+    })
+
+  })
 
   xdescribe("Owner Withdrawals", () => { });
 
