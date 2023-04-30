@@ -197,6 +197,12 @@ contract RefundContract {
     function markOrderAsReturned(uint orderId) public onlyDeliveryPartner {
         Order storage order = orders[orderId];
         require(order.customer != address(0), "Order does not exist");
+        // if order status is returned throw error
+
+        if (order.status == Status.RETURNED) {
+            revert("Order has already been returned");
+        }
+
         require(
             order.status == Status.DELIVERED,
             "Order must be marked as delivered to be returned"
