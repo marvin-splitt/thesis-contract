@@ -5,8 +5,6 @@ pragma solidity ^0.8.17;
 
 // DAI contract interface
 interface DaiContract {
-    function approve(address guy, uint wad) external returns (bool);
-
     function transfer(address dst, uint wad) external returns (bool);
 
     function transferFrom(

@@ -642,7 +642,6 @@ describe("RefundContract", () => {
       await refundContract.connect(addedDeliveryPartner).markOrderAsReturned(orderId);
       await refundContract.connect(customer).refundOrder(orderId);
 
-      // TODO: Ask Marco about the fees
       expect(await daiContract.balanceOf(await customer.getAddress())).to.equal(customersDaiBalance);
     })
 
