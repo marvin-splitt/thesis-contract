@@ -52,7 +52,7 @@ describe("RefundContract", () => {
 
     it("Should deploy the contract with the correct dai contract address", async () => {
       const { refundContract } = await loadFixture(deployFixture);
-      expect(await refundContract.daiContract()).to.equal(process.env.DAI_CONTRACT_ADDRESS);
+      expect(await refundContract.erc20Contract()).to.equal(process.env.DAI_CONTRACT_ADDRESS);
     });
 
     it("Should deploy the contract with the correct refund duration", async () => {

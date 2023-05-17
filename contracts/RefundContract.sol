@@ -1,21 +1,12 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+// DEV Dependencies, remove for production
 import "hardhat/console.sol";
 
 pragma solidity ^0.8.17;
 
-// DAI contract interface
-interface DaiContract {
-    function transfer(address dst, uint wad) external returns (bool);
-
-    function transferFrom(
-        address src,
-        address dst,
-        uint wad
-    ) external returns (bool);
-}
-
 contract RefundContract {
-    DaiContract public daiContract;
+    ERC20 public erc20Contract;
     address public owner;
     uint public refundDuration;
     uint private _orderCounter;
@@ -46,8 +37,8 @@ contract RefundContract {
         REFUNDED
     }
 
-    constructor(address daiContractAddress, uint refundDuration_) {
-        daiContract = DaiContract(daiContractAddress);
+    constructor(address erc20ContractAddress, uint refundDuration_) {
+        erc20Contract = ERC20(erc20ContractAddress);
         owner = msg.sender;
         refundDuration = refundDuration_ * 1 days;
     }
@@ -157,7 +148,7 @@ contract RefundContract {
             wad == orders[orderId].amount,
             "Payment amount must match order amount"
         );
-        daiContract.transferFrom(msg.sender, address(this), wad);
+        erc20Contract.transferFrom(msg.sender, address(this), wad);
         orders[orderId].status = Status.PAID;
         emit OrderPaid(orderId, msg.sender, wad, Status.PAID);
         return true;
@@ -277,7 +268,7 @@ contract RefundContract {
             "Order refund period has expired"
         );
         require(order.closedAt == 0, "Order has already been closed");
-        daiContract.transfer(order.customer, order.amount);
+        erc20Contract.transfer(order.customer, order.amount);
         order.status = Status.REFUNDED;
         order.refundedAt = block.timestamp;
         orders[orderId] = order;
@@ -319,7 +310,7 @@ contract RefundContract {
 
     function withdrawOwnerBalance() public onlyOwner {
         require(_ownerBalance > 0, "Owner balance must be greater than 0");
-        daiContract.transfer(owner, _ownerBalance);
+        erc20Contract.transfer(owner, _ownerBalance);
         emit OwnerBalanceWithdrawn(owner, _ownerBalance);
         _ownerBalance = 0;
     }
