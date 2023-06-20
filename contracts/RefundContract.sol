@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+// import "@openzeppelin/contracts/access/AccessControl.sol";
 // DEV Dependencies, remove for production
 import "hardhat/console.sol";
 
 pragma solidity ^0.8.17;
 
-contract RefundContract is AccessControl {
+contract RefundContract {
     IERC20 public erc20Contract;
     address public owner;
     uint public refundDuration;
