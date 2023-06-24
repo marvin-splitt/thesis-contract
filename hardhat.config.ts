@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 // import "hardhat-gas-reporter";
 // import "hardhat-tracer";
 // import "hardhat-storage-layout";
+import "hardhat-abi-exporter";
 
 dotenv.config();
 
@@ -11,6 +12,7 @@ const config: HardhatUserConfig = {
   solidity: "0.8.17",
   networks: {
     hardhat: {
+      loggingEnabled: true,
       forking: {
         // Fork of ETH mainnet
         url: process.env.ALCHEMY_MAINNET_URL || "",
@@ -21,6 +23,13 @@ const config: HardhatUserConfig = {
   },
   gasReporter: {
     enabled: true,
+  },
+  abiExporter: {
+    path: "./abi",
+    clear: true,
+    flat: true,
+
+    spacing: 2,
   },
 };
 
