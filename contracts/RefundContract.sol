@@ -1,26 +1,33 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// import "@openzeppelin/contracts/access/AccessControl.sol";
 // DEV Dependencies, remove for production
 import "hardhat/console.sol";
 
 pragma solidity ^0.8.17;
 
 contract RefundContract {
+    // address of the ERC20 token contract used for payments
     IERC20 public erc20Contract;
+    // address of the owner of the contract, in this case the merchant
     address public owner;
+    // duration in days for the refund period
     uint public refundDuration;
+    // counter to keep track of the order ids
     uint private _orderCounter;
     // array of delivery partner addresses
     address[] public deliveryPartners;
     // amount of DAI the owner is able to withdraw
     uint private _ownerBalance;
 
+    // modifier to check if the caller is the owner of the contract
+    // if not, the function will throw an error and revert
     modifier onlyOwner() {
         require(msg.sender == owner, "Ownable: caller is not the owner");
         _;
     }
 
+    // modifier to check if the caller is a delivery partner
+    // if not, the function will throw an error and revert
     modifier onlyDeliveryPartner() {
         require(
             isDeliveryPartner(msg.sender),
@@ -29,15 +36,22 @@ contract RefundContract {
         _;
     }
 
+    // enum to keep track of the order status
+    // depending on the status, different functions can be called
     enum Status {
         CREATED,
         PAID,
         SHIPPED,
         DELIVERED,
         RETURNED,
-        REFUNDED
+        REFUNDED,
+        CLOSED
     }
 
+    // constructor to initialize the contract
+    // here we pass the address of the ERC20 token contract
+    // and the duration of the refund period in days
+    // the owner of the contract is set to the address which deploys the contract
     constructor(address erc20ContractAddress, uint refundDuration_) {
         erc20Contract = IERC20(erc20ContractAddress);
         owner = msg.sender;
@@ -50,42 +64,21 @@ contract RefundContract {
         address customer;
         uint amount;
         Status status;
-        string externalOrderNumber;
+        uint externalOrderNumber;
         uint createdAt;
         uint returnedAt;
         uint refundedAt;
         uint closedAt;
     }
 
-    struct SearchResult {
-        uint index;
-        bool found;
-    }
-
+    // mapping to store orders
+    // key is the order id
+    // value is the order struct
     mapping(uint => Order) private orders;
-    // Array of order ids which are not yet completly processed
-    // e.g. still in the refund period
-    uint[] private openOrders;
-
-    function removeOpenOrderEntry(uint _index) public {
-        require(_index < openOrders.length, "index out of bound");
-
-        for (uint i = _index; i < openOrders.length - 1; i++) {
-            openOrders[i] = openOrders[i + 1];
-        }
-        openOrders.pop();
-    }
-
-    function getOpenOrderIndexByOrderId(
-        uint orderId
-    ) public view returns (SearchResult memory) {
-        for (uint i = 0; i < openOrders.length; i++) {
-            if (openOrders[i] == orderId) {
-                return SearchResult(i, true);
-            }
-        }
-        return SearchResult(0, false);
-    }
+    // mapping to store open orders
+    // key is the external order number
+    // value is the order id
+    mapping(uint => uint) private openOrders;
 
     // event to be emitted when a delivery partner is added
     event DeliveryPartnerAdded(address deliveryPartner);
@@ -95,40 +88,56 @@ contract RefundContract {
         uint orderId,
         address customer,
         uint amount,
-        Status status
+        Status status,
+        uint externalOrderNumber
     );
 
-    event OrderPaid(uint orderId, address customer, uint amount, Status status);
+    event OrderPaid(
+        uint orderId,
+        address customer,
+        uint amount,
+        Status status,
+        uint externalOrderNumber
+    );
 
     event OrderShipped(
         uint orderId,
         address customer,
         address deliveryPartner,
-        Status status
+        Status status,
+        uint externalOrderNumber
     );
 
     event OrderDelivered(
         uint orderId,
         address customer,
         address deliveryPartner,
-        Status status
+        Status status,
+        uint externalOrderNumber
     );
 
     event OrderReturned(
         uint orderId,
         address customer,
         address deliveryPartner,
-        Status status
+        Status status,
+        uint externalOrderNumber
     );
 
     event OrderRefunded(
         uint orderId,
         address customer,
         uint amount,
-        Status status
+        Status status,
+        uint externalOrderNumber
     );
 
-    event OrderClosed(uint orderId);
+    event OrderClosed(
+        uint orderId,
+        address customer,
+        Status status,
+        uint externalOrderNumber
+    );
 
     event OwnerBalanceWithdrawn(address owner, uint amount);
 
@@ -151,7 +160,13 @@ contract RefundContract {
         );
         erc20Contract.transferFrom(msg.sender, address(this), wad);
         orders[orderId].status = Status.PAID;
-        emit OrderPaid(orderId, msg.sender, wad, Status.PAID);
+        emit OrderPaid(
+            orderId,
+            msg.sender,
+            wad,
+            Status.PAID,
+            orders[orderId].externalOrderNumber
+        );
         return true;
     }
 
@@ -174,7 +189,7 @@ contract RefundContract {
     function createOrder(
         address customer,
         uint amount,
-        string memory orderNumber
+        uint orderNumber
     ) public onlyOwner {
         require(amount > 0, "Amount must be greater than 0");
         _orderCounter++;
@@ -190,8 +205,14 @@ contract RefundContract {
             0
         );
         orders[_orderCounter] = newOrder;
-        openOrders.push(_orderCounter);
-        emit OrderCreated(_orderCounter, customer, amount, Status.CREATED);
+        openOrders[orderNumber] = _orderCounter;
+        emit OrderCreated(
+            _orderCounter,
+            customer,
+            amount,
+            Status.CREATED,
+            orderNumber
+        );
     }
 
     function getOrder(
@@ -209,7 +230,13 @@ contract RefundContract {
         );
         order.status = Status.SHIPPED;
         orders[orderId] = order;
-        emit OrderShipped(orderId, order.customer, msg.sender, Status.SHIPPED);
+        emit OrderShipped(
+            orderId,
+            order.customer,
+            msg.sender,
+            Status.SHIPPED,
+            order.externalOrderNumber
+        );
     }
 
     function markOrderAsDelivered(uint orderId) public onlyDeliveryPartner {
@@ -246,11 +273,19 @@ contract RefundContract {
             orderId,
             order.customer,
             msg.sender,
-            Status.RETURNED
+            Status.RETURNED,
+            order.externalOrderNumber
         );
     }
 
-    function refundOrder(uint orderId) public {
+    function refundOrder(uint orderNumber) public {
+        console.log("refundOrder", orderNumber);
+        uint orderId = openOrders[orderNumber];
+        console.log("orderId", orderId);
+        require(
+            orderId > 0,
+            "Order does not exist or has already been refunded"
+        );
         Order storage order = orders[orderId];
         require(order.customer != address(0), "Order does not exist");
         if (order.status == Status.REFUNDED) {
@@ -260,6 +295,7 @@ contract RefundContract {
             order.status == Status.RETURNED || order.status == Status.PAID,
             "Order must be marked as returned or paid to be refunded"
         );
+
         require(
             msg.sender == order.customer,
             "Orders can only be refunded by the customer"
@@ -269,50 +305,70 @@ contract RefundContract {
             "Order refund period has expired"
         );
         require(order.closedAt == 0, "Order has already been closed");
+        // FIXME: This is potentially a re-entrancy vulnerability
         erc20Contract.transfer(order.customer, order.amount);
         order.status = Status.REFUNDED;
         order.refundedAt = block.timestamp;
         orders[orderId] = order;
-        SearchResult memory searchResult = getOpenOrderIndexByOrderId(orderId);
-        assert(searchResult.found);
-        removeOpenOrderEntry(searchResult.index);
+        openOrders[orderNumber] = 0;
         emit OrderRefunded(
             orderId,
             order.customer,
             order.amount,
-            Status.REFUNDED
+            Status.REFUNDED,
+            order.externalOrderNumber
         );
     }
 
-    function updateOwnersBalance() public onlyOwner {
-        for (uint i = 0; i < openOrders.length; i++) {
-            Order memory order = orders[openOrders[i]];
-            if (
-                order.createdAt + refundDuration < block.timestamp &&
-                order.status == Status.DELIVERED &&
-                order.refundedAt == 0 &&
-                order.returnedAt == 0
-            ) {
-                orders[order.orderId].closedAt = block.timestamp;
-                _ownerBalance += order.amount;
-                removeOpenOrderEntry(i);
-                emit OrderClosed(order.orderId);
-            }
-        }
+    function updateOwnersBalance(uint orderNumber) public onlyOwner {
+        uint orderId = openOrders[orderNumber];
+        require(orderId > 0, "Order does not exist");
+        Order memory order = orders[orderId];
+        require(order.customer != address(0), "Order does not exist");
+        require(
+            order.status == Status.DELIVERED,
+            "Order must be marked as delivered to update owner's balance"
+        );
+        require(
+            order.refundedAt == 0,
+            "Order must not have been refunded to update owner's balance"
+        );
+        require(
+            order.returnedAt == 0,
+            "Order must not have been returned to update owner's balance"
+        );
+        require(order.closedAt == 0, "Order has already been closed");
+        require(
+            order.createdAt + refundDuration < block.timestamp,
+            "Order refund period has not expired"
+        );
+        _ownerBalance += order.amount;
+        orders[orderId].closedAt = block.timestamp;
+        openOrders[orderNumber] = 0;
+        emit OrderClosed(
+            orderId,
+            order.customer,
+            Status.CLOSED,
+            order.externalOrderNumber
+        );
     }
 
     function getOwnersBalance() public view onlyOwner returns (uint) {
         return _ownerBalance;
     }
 
-    function getOpenOrders() public view onlyOwner returns (uint[] memory) {
-        return openOrders;
-    }
-
     function withdrawOwnerBalance() public onlyOwner {
+        console.log("withdrawOwnerBalance", _ownerBalance);
+        console.log("contract balance", erc20Contract.balanceOf(address(this)));
         require(_ownerBalance > 0, "Owner balance must be greater than 0");
-        erc20Contract.transfer(owner, _ownerBalance);
-        emit OwnerBalanceWithdrawn(owner, _ownerBalance);
+        require(
+            erc20Contract.balanceOf(address(this)) >= _ownerBalance,
+            "Contract balance must be greater than owner balance"
+        );
+        console.log("transfering");
+        uint amount = _ownerBalance;
         _ownerBalance = 0;
+        erc20Contract.transfer(owner, amount);
+        emit OwnerBalanceWithdrawn(owner, amount);
     }
 }

@@ -13,6 +13,7 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       loggingEnabled: true,
+      chainId: 1337,
       forking: {
         // Fork of ETH mainnet
         url: process.env.ALCHEMY_MAINNET_URL || "",
