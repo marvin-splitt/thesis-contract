@@ -36,6 +36,24 @@
         "internalType": "uint256",
         "name": "orderId",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "customer",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "enum RefundContract.Status",
+        "name": "status",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "externalOrderNumber",
+        "type": "uint256"
       }
     ],
     "name": "OrderClosed",
@@ -67,6 +85,12 @@
         "internalType": "enum RefundContract.Status",
         "name": "status",
         "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "externalOrderNumber",
+        "type": "uint256"
       }
     ],
     "name": "OrderCreated",
@@ -98,6 +122,12 @@
         "internalType": "enum RefundContract.Status",
         "name": "status",
         "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "externalOrderNumber",
+        "type": "uint256"
       }
     ],
     "name": "OrderDelivered",
@@ -129,6 +159,12 @@
         "internalType": "enum RefundContract.Status",
         "name": "status",
         "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "externalOrderNumber",
+        "type": "uint256"
       }
     ],
     "name": "OrderPaid",
@@ -160,6 +196,12 @@
         "internalType": "enum RefundContract.Status",
         "name": "status",
         "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "externalOrderNumber",
+        "type": "uint256"
       }
     ],
     "name": "OrderRefunded",
@@ -191,6 +233,12 @@
         "internalType": "enum RefundContract.Status",
         "name": "status",
         "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "externalOrderNumber",
+        "type": "uint256"
       }
     ],
     "name": "OrderReturned",
@@ -222,6 +270,12 @@
         "internalType": "enum RefundContract.Status",
         "name": "status",
         "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "externalOrderNumber",
+        "type": "uint256"
       }
     ],
     "name": "OrderShipped",
@@ -272,9 +326,9 @@
         "type": "uint256"
       },
       {
-        "internalType": "string",
+        "internalType": "uint256",
         "name": "orderNumber",
-        "type": "string"
+        "type": "uint256"
       }
     ],
     "name": "createOrder",
@@ -322,50 +376,6 @@
         "type": "uint256"
       }
     ],
-    "name": "getOpenOrderIndexByOrderId",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "uint256",
-            "name": "index",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bool",
-            "name": "found",
-            "type": "bool"
-          }
-        ],
-        "internalType": "struct RefundContract.SearchResult",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getOpenOrders",
-    "outputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "",
-        "type": "uint256[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "orderId",
-        "type": "uint256"
-      }
-    ],
     "name": "getOrder",
     "outputs": [
       {
@@ -391,9 +401,9 @@
             "type": "uint8"
           },
           {
-            "internalType": "string",
+            "internalType": "uint256",
             "name": "externalOrderNumber",
-            "type": "string"
+            "type": "uint256"
           },
           {
             "internalType": "uint256",
@@ -549,7 +559,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "orderId",
+        "name": "orderNumber",
         "type": "uint256"
       }
     ],
@@ -562,17 +572,10 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "_index",
+        "name": "orderNumber",
         "type": "uint256"
       }
     ],
-    "name": "removeOpenOrderEntry",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "updateOwnersBalance",
     "outputs": [],
     "stateMutability": "nonpayable",
