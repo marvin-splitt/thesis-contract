@@ -92,6 +92,7 @@ contract RefundContract {
         uint externalOrderNumber
     );
 
+    // event to be emitted when an order is paid
     event OrderPaid(
         uint orderId,
         address customer,
@@ -100,6 +101,7 @@ contract RefundContract {
         uint externalOrderNumber
     );
 
+    // event to be emitted when an order is shipped
     event OrderShipped(
         uint orderId,
         address customer,
@@ -108,6 +110,7 @@ contract RefundContract {
         uint externalOrderNumber
     );
 
+    // event to be emitted when an order is delivered
     event OrderDelivered(
         uint orderId,
         address customer,
@@ -116,6 +119,7 @@ contract RefundContract {
         uint externalOrderNumber
     );
 
+    // event to be emitted when an order is returned
     event OrderReturned(
         uint orderId,
         address customer,
@@ -124,6 +128,7 @@ contract RefundContract {
         uint externalOrderNumber
     );
 
+    // event to be emitted when an order is refunded
     event OrderRefunded(
         uint orderId,
         address customer,
@@ -132,6 +137,7 @@ contract RefundContract {
         uint externalOrderNumber
     );
 
+    // event to be emitted when an order is closed
     event OrderClosed(
         uint orderId,
         address customer,
@@ -139,6 +145,7 @@ contract RefundContract {
         uint externalOrderNumber
     );
 
+    // event to be emitted when the owner's balance is withdrawn
     event OwnerBalanceWithdrawn(address owner, uint amount);
 
     // DAI Contract transferFrom wrapper
@@ -158,6 +165,7 @@ contract RefundContract {
             wad == orders[orderId].amount,
             "Payment amount must match order amount"
         );
+        // FIXME: This is potentially a re-entrancy vulnerability
         erc20Contract.transferFrom(msg.sender, address(this), wad);
         orders[orderId].status = Status.PAID;
         emit OrderPaid(
@@ -363,7 +371,7 @@ contract RefundContract {
         require(_ownerBalance > 0, "Owner balance must be greater than 0");
         require(
             erc20Contract.balanceOf(address(this)) >= _ownerBalance,
-            "Contract balance must be greater than owner balance"
+            "Contract balance must be equal or greater than owner balance"
         );
         console.log("transfering");
         uint amount = _ownerBalance;
