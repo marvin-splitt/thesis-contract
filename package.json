@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "hardhat:node": "hardhat node",
+    "hardhat:deploy": "hardhat run ./scripts/deploy.ts --network localhost"
   },
   "keywords": [],
   "author": "Marvin Splitt",
