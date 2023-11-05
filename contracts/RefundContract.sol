@@ -179,6 +179,7 @@ contract RefundContract {
     }
 
     function addDeliveryPartner(address deliveryPartner) public onlyOwner {
+        console.log("addDeliveryPartner", deliveryPartner);
         deliveryPartners.push(deliveryPartner);
         emit DeliveryPartnerAdded(deliveryPartner);
     }
@@ -255,6 +256,13 @@ contract RefundContract {
         );
         order.status = Status.DELIVERED;
         orders[orderId] = order;
+        emit OrderDelivered(
+            orderId,
+            order.customer,
+            msg.sender,
+            Status.DELIVERED,
+            order.externalOrderNumber
+        );
     }
 
     function markOrderAsReturned(uint orderId) public onlyDeliveryPartner {
@@ -350,6 +358,7 @@ contract RefundContract {
             order.createdAt + refundDuration < block.timestamp,
             "Order refund period has not expired"
         );
+        console.log("updateOwnersBalance", orderId);
         _ownerBalance += order.amount;
         orders[orderId].closedAt = block.timestamp;
         openOrders[orderNumber] = 0;
@@ -362,6 +371,7 @@ contract RefundContract {
     }
 
     function getOwnersBalance() public view onlyOwner returns (uint) {
+        console.log("getOwnersBalance", _ownerBalance);
         return _ownerBalance;
     }
 
