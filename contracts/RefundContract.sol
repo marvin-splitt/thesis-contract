@@ -346,25 +346,29 @@ contract RefundContract {
 
         uint orderId = openOrders[orderNumber];
         Order memory order = orders[orderId];
+        bool isRefunded = order.refundedAt == 0 &&
+            order.status == Status.REFUNDED;
+        bool isClosed = order.closedAt == 0 && order.status == Status.CLOSED;
 
-        require(order.customer != address(0), "Order does not exist");
         require(
-            order.refundedAt == 0,
-            "Order must not have been refunded to update owner's balance"
+            order.customer != address(0) && !isRefunded && !isClosed,
+            "Order does not exist or has already been refunded"
         );
+
         require(
-            order.returnedAt == 0,
+            order.returnedAt == 0 && order.status != Status.RETURNED,
             "Order must not have been returned to update owner's balance"
         );
-        require(order.closedAt == 0, "Order has already been closed");
-        require(
-            order.createdAt + refundDuration < block.timestamp,
-            "Order refund period has not expired"
-        );
+
         require(
             order.status == Status.DELIVERED,
             "Order must be marked as delivered to update owner's balance"
         );
+        require(
+            order.createdAt + refundDuration < block.timestamp,
+            "Order refund period has not expired"
+        );
+
         console.log("updateOwnersBalance", orderId);
         _ownerBalance += order.amount;
         orders[orderId].closedAt = block.timestamp;
@@ -386,10 +390,6 @@ contract RefundContract {
         console.log("withdrawOwnerBalance", _ownerBalance);
         console.log("contract balance", erc20Contract.balanceOf(address(this)));
         require(_ownerBalance > 0, "Owner balance must be greater than 0");
-        require(
-            erc20Contract.balanceOf(address(this)) >= _ownerBalance,
-            "Contract balance must be equal or greater than owner balance"
-        );
         console.log("transfering");
         uint amount = _ownerBalance;
         _ownerBalance = 0;

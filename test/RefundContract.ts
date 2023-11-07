@@ -960,7 +960,6 @@ describe("RefundContract", () => {
         customer,
         orderReceipt,
         addedDeliveryPartner,
-        daiContract,
         admin,
       } = await loadFixture(deployFixture);
 
@@ -974,8 +973,6 @@ describe("RefundContract", () => {
       await refundContract
         .connect(addedDeliveryPartner)
         .markOrderAsDelivered(orderId);
-
-      const order = await refundContract.getOrder(orderId);
 
       // Increase time by 14 days and 1 second to simulate the refund period has expired
       await ethers.provider.send("evm_increaseTime", [60 * 60 * 24 * 14 + 1]);
@@ -1006,8 +1003,6 @@ describe("RefundContract", () => {
         .connect(addedDeliveryPartner)
         .markOrderAsDelivered(orderId);
 
-      const order = await refundContract.getOrder(orderId);
-
       // Increase time by 14 days and 1 second to simulate the refund period has expired
       await ethers.provider.send("evm_increaseTime", [60 * 60 * 24 * 14 + 1]);
       await ethers.provider.send("evm_mine", []);
@@ -1017,6 +1012,196 @@ describe("RefundContract", () => {
       )
         .to.emit(refundContract, "OrderClosed")
         .withArgs(orderId);
+    });
+
+    it("Should reject to update the owner balance if the order number is not positive", async () => {
+      const {
+        refundContract,
+        customer,
+        orderReceipt,
+        addedDeliveryPartner,
+        admin,
+      } = await loadFixture(deployFixture);
+
+      const orderId = orderReceipt.events![0].args![0];
+      const orderPrice = ethers.utils.parseEther("100");
+
+      await refundContract.connect(customer).payOrder(orderPrice, orderId);
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsShipped(orderId);
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsDelivered(orderId);
+
+      await expect(
+        refundContract.connect(admin).updateOwnersBalance(0)
+      ).to.be.revertedWith("Order does not exist");
+    });
+
+    it("Should reject to update the owner balance if the order does not exist", async () => {
+      const {
+        refundContract,
+        customer,
+        orderReceipt,
+        addedDeliveryPartner,
+        admin,
+      } = await loadFixture(deployFixture);
+
+      const orderId = orderReceipt.events![0].args![0];
+      const orderPrice = ethers.utils.parseEther("100");
+
+      await refundContract.connect(customer).payOrder(orderPrice, orderId);
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsShipped(orderId);
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsDelivered(orderId);
+
+      await expect(
+        refundContract.connect(admin).updateOwnersBalance(1000000)
+      ).to.be.revertedWith("Order does not exist or has already been refunded");
+    });
+
+    it("Should reject to update the owner balance if the order has not been delivered", async () => {
+      const {
+        refundContract,
+        customer,
+        orderReceipt,
+        addedDeliveryPartner,
+        admin,
+      } = await loadFixture(deployFixture);
+
+      const orderId = orderReceipt.events![0].args![0];
+      const orderPrice = ethers.utils.parseEther("100");
+
+      await refundContract.connect(customer).payOrder(orderPrice, orderId);
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsShipped(orderId);
+
+      await expect(
+        refundContract.connect(admin).updateOwnersBalance(orderNumber)
+      ).to.be.revertedWith(
+        "Order must be marked as delivered to update owner's balance"
+      );
+    });
+
+    it("Should reject to update the owner balance if the order has been returned", async () => {
+      const {
+        refundContract,
+        customer,
+        orderReceipt,
+        addedDeliveryPartner,
+        admin,
+      } = await loadFixture(deployFixture);
+
+      const orderId = orderReceipt.events![0].args![0];
+      const orderPrice = ethers.utils.parseEther("100");
+
+      await refundContract.connect(customer).payOrder(orderPrice, orderId);
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsShipped(orderId);
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsDelivered(orderId);
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsReturned(orderId);
+
+      await expect(
+        refundContract.connect(admin).updateOwnersBalance(orderNumber)
+      ).to.be.revertedWith(
+        "Order must not have been returned to update owner's balance"
+      );
+    });
+
+    it("Should reject to update the owner balance if the order has been refunded", async () => {
+      const {
+        refundContract,
+        customer,
+        orderReceipt,
+        addedDeliveryPartner,
+        admin,
+      } = await loadFixture(deployFixture);
+
+      const orderId = orderReceipt.events![0].args![0];
+      const orderPrice = ethers.utils.parseEther("100");
+
+      await refundContract.connect(customer).payOrder(orderPrice, orderId);
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsShipped(orderId);
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsDelivered(orderId);
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsReturned(orderId);
+      await refundContract.connect(customer).refundOrder(orderNumber);
+
+      await expect(
+        refundContract.connect(admin).updateOwnersBalance(orderNumber)
+      ).to.be.revertedWith("Order does not exist or has already been refunded");
+    });
+
+    it("Should reject to update the owner balance if the order already been closed", async () => {
+      const {
+        refundContract,
+        customer,
+        orderReceipt,
+        addedDeliveryPartner,
+        admin,
+      } = await loadFixture(deployFixture);
+      const orderId = orderReceipt.events![0].args![0];
+      const orderPrice = ethers.utils.parseEther("100");
+
+      await refundContract.connect(customer).payOrder(orderPrice, orderId);
+
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsShipped(orderId);
+
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsDelivered(orderId);
+
+      // Increase time by 14 days and 1 second to simulate the refund period has expired
+      await ethers.provider.send("evm_increaseTime", [60 * 60 * 24 * 14 + 1]);
+      await ethers.provider.send("evm_mine", []);
+      await refundContract.connect(admin).updateOwnersBalance(orderNumber);
+
+      await expect(
+        refundContract.connect(admin).updateOwnersBalance(orderNumber)
+      ).to.be.revertedWith("Order does not exist or has already been refunded");
+    });
+
+    it("Should reject to update the owner balance if the order's refund period has not been expired", async () => {
+      const {
+        refundContract,
+        customer,
+        orderReceipt,
+        addedDeliveryPartner,
+        admin,
+      } = await loadFixture(deployFixture);
+      const orderId = orderReceipt.events![0].args![0];
+      const orderPrice = ethers.utils.parseEther("100");
+
+      await refundContract.connect(customer).payOrder(orderPrice, orderId);
+
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsShipped(orderId);
+
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsDelivered(orderId);
+
+      await expect(
+        refundContract.connect(admin).updateOwnersBalance(orderNumber)
+      ).to.be.revertedWith("Order refund period has not expired");
     });
   });
 
