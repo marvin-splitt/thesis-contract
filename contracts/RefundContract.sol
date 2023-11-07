@@ -148,6 +148,10 @@ contract RefundContract {
     // event to be emitted when the owner's balance is withdrawn
     event OwnerBalanceWithdrawn(address owner, uint amount);
 
+    function refundPeriodActive(uint createdAt) public view returns (bool) {
+        return (createdAt + refundDuration) > block.timestamp;
+    }
+
     // DAI Contract transferFrom wrapper
     function payOrder(uint wad, uint orderId) public returns (bool) {
         require(wad > 0, "Amount must be greater than 0");
@@ -321,8 +325,7 @@ contract RefundContract {
             "Orders can only be refunded by the customer"
         );
         require(
-            (order.createdAt + refundDuration > block.timestamp) &&
-                order.closedAt == 0,
+            refundPeriodActive(order.createdAt) && order.closedAt == 0,
             "Order refund period has expired"
         );
 
@@ -365,7 +368,7 @@ contract RefundContract {
             "Order must be marked as delivered to update owner's balance"
         );
         require(
-            order.createdAt + refundDuration < block.timestamp,
+            !refundPeriodActive(order.createdAt),
             "Order refund period has not expired"
         );
 
