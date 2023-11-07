@@ -279,11 +279,13 @@ contract RefundContract {
             order.status == Status.DELIVERED,
             "Order must be marked as delivered to be returned"
         );
+
         require(
-            block.timestamp - order.createdAt <= refundDuration,
+            (block.timestamp - order.createdAt <= refundDuration) &&
+                order.closedAt == 0,
             "Order refund period has expired"
         );
-        require(order.closedAt == 0, "Order has already been closed");
+
         order.status = Status.RETURNED;
         order.returnedAt = block.timestamp;
         orders[orderId] = order;
@@ -298,21 +300,15 @@ contract RefundContract {
 
     function refundOrder(uint orderNumber) public {
         console.log("refundOrder", orderNumber);
+
+        require(orderNumber > 0, "Order does not exist");
+
         uint orderId = openOrders[orderNumber];
-        console.log("orderId", orderId);
-
-        require(
-            orderId > 0,
-            "Order does not exist or has already been refunded"
-        );
-
         Order storage order = orders[orderId];
 
-        require(order.customer != address(0), "Order does not exist");
-
         require(
-            order.status != Status.REFUNDED,
-            "Order has already been refunded"
+            order.customer != address(0) && order.status != Status.REFUNDED,
+            "Order does not exist or has already been refunded"
         );
 
         require(
@@ -325,10 +321,11 @@ contract RefundContract {
             "Orders can only be refunded by the customer"
         );
         require(
-            block.timestamp - order.returnedAt <= refundDuration,
+            (block.timestamp - order.returnedAt <= refundDuration) &&
+                order.closedAt == 0,
             "Order refund period has expired"
         );
-        require(order.closedAt == 0, "Order has already been closed");
+
         // FIXME: This is potentially a re-entrancy vulnerability
         erc20Contract.transfer(order.customer, order.amount);
         order.status = Status.REFUNDED;
@@ -345,14 +342,12 @@ contract RefundContract {
     }
 
     function updateOwnersBalance(uint orderNumber) public onlyOwner {
+        require(orderNumber > 0, "Order does not exist");
+
         uint orderId = openOrders[orderNumber];
-        require(orderId > 0, "Order does not exist");
         Order memory order = orders[orderId];
+
         require(order.customer != address(0), "Order does not exist");
-        require(
-            order.status == Status.DELIVERED,
-            "Order must be marked as delivered to update owner's balance"
-        );
         require(
             order.refundedAt == 0,
             "Order must not have been refunded to update owner's balance"
@@ -365,6 +360,10 @@ contract RefundContract {
         require(
             order.createdAt + refundDuration < block.timestamp,
             "Order refund period has not expired"
+        );
+        require(
+            order.status == Status.DELIVERED,
+            "Order must be marked as delivered to update owner's balance"
         );
         console.log("updateOwnersBalance", orderId);
         _ownerBalance += order.amount;

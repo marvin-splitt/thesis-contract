@@ -797,6 +797,14 @@ describe("RefundContract", () => {
       ).to.be.revertedWith("Orders can only be refunded by the customer");
     });
 
+    it("Should reject to refund an order if the order id is 0", async () => {
+      const { refundContract, customer } = await loadFixture(deployFixture);
+
+      await expect(
+        refundContract.connect(customer).refundOrder(0)
+      ).to.be.revertedWith("Order does not exist");
+    });
+
     it("Should reject to refund an order if the order does not exist", async () => {
       const { refundContract, customer } = await loadFixture(deployFixture);
 
