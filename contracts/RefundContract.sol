@@ -321,7 +321,7 @@ contract RefundContract {
             "Orders can only be refunded by the customer"
         );
         require(
-            (block.timestamp - order.returnedAt <= refundDuration) &&
+            (order.createdAt + refundDuration > block.timestamp) &&
                 order.closedAt == 0,
             "Order refund period has expired"
         );
