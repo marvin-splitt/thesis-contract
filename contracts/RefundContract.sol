@@ -250,6 +250,7 @@ contract RefundContract {
 
     function markOrderAsDelivered(uint orderId) public onlyDeliveryPartner {
         Order storage order = orders[orderId];
+        require(order.customer != address(0), "Order does not exist");
         require(
             order.status == Status.SHIPPED,
             "Order must be marked as shipped to be delivered"

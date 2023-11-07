@@ -479,6 +479,68 @@ describe("RefundContract", () => {
     });
   });
 
+  describe("Delivery Confirmation", () => {
+    it("Should mark an order as delivered", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } =
+        await loadFixture(deployFixture);
+
+      const orderId = orderReceipt.events![0].args![0];
+      await refundContract
+        .connect(customer)
+        .payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsShipped(orderId);
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsDelivered(orderId);
+
+      const order = await refundContract.getOrder(orderId);
+      expect(order.status).to.equal(3);
+    });
+
+    it("Should reject to mark an order as delivered if the order is not shipped", async () => {
+      const { refundContract, orderReceipt, addedDeliveryPartner } =
+        await loadFixture(deployFixture);
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await expect(
+        refundContract
+          .connect(addedDeliveryPartner)
+          .markOrderAsDelivered(orderId)
+      ).to.be.revertedWith("Order must be marked as shipped to be delivered");
+    });
+
+    it("Should reject to mark an order as delivered if the caller is not a delivery partner", async () => {
+      const { refundContract, customer, orderReceipt } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await refundContract
+        .connect(customer)
+        .payOrder(ethers.utils.parseEther("100"), orderId);
+
+      await expect(
+        refundContract.connect(customer).markOrderAsDelivered(orderId)
+      ).to.be.revertedWith("Only delivery partners can call this function");
+    });
+
+    it("Should reject to mark an order as delivered if the order does not exist", async () => {
+      const { refundContract, addedDeliveryPartner } = await loadFixture(
+        deployFixture
+      );
+
+      await expect(
+        refundContract
+          .connect(addedDeliveryPartner)
+          .markOrderAsDelivered(100000000000)
+      ).to.be.revertedWith("Order does not exist");
+    });
+  });
+
   describe("Returns", () => {
     it("Should mark an order as returned", async () => {
       const { refundContract, customer, orderReceipt, addedDeliveryPartner } =
