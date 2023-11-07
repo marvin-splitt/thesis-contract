@@ -292,6 +292,44 @@ describe("RefundContract", () => {
       expect(order.status).to.equal(1);
     });
 
+    it("Should reject if amount is less than 0", async () => {
+      const { refundContract, customer, orderReceipt } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await expect(
+        refundContract
+          .connect(customer)
+          .payOrder(ethers.utils.parseEther("0"), orderId)
+      ).to.be.revertedWith("Amount must be greater than 0");
+    });
+
+    it("Should reject if the order id is 0", async () => {
+      const { refundContract, customer } = await loadFixture(deployFixture);
+
+      await expect(
+        refundContract
+          .connect(customer)
+          .payOrder(ethers.utils.parseEther("100"), 0)
+      ).to.be.revertedWith("Order ID must be greater than 0");
+    });
+
+    it("Should reject if the caller is not the customer", async () => {
+      const { refundContract, admin, orderReceipt } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+
+      await expect(
+        refundContract
+          .connect(admin)
+          .payOrder(ethers.utils.parseEther("100"), orderId)
+      ).to.be.revertedWith("Only the customer can pay for the order");
+    });
+
     it("Should reject payments if the order is already paid", async () => {
       const { refundContract, customer, orderReceipt, daiContract } =
         await loadFixture(deployFixture);
