@@ -752,6 +752,23 @@ describe("RefundContract", () => {
       expect(order.status).to.equal(5);
     });
 
+    it("Should refund an order if the order is not shipped", async () => {
+      const { refundContract, customer, orderReceipt } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+      let order = await refundContract.getOrder(orderId);
+
+      await refundContract
+        .connect(customer)
+        .payOrder(ethers.utils.parseEther("100"), orderId);
+      await refundContract.connect(customer).refundOrder(orderNumber);
+
+      order = await refundContract.getOrder(orderId);
+      expect(order.status).to.equal(5);
+    });
+
     it("Should reject to refund an order if the order is already shipped", async () => {
       const { refundContract, customer, orderReceipt, addedDeliveryPartner } =
         await loadFixture(deployFixture);
@@ -953,6 +970,23 @@ describe("RefundContract", () => {
     });
   });
 
+  describe("Get Owner Balance", () => {
+    it("Should reject to return the owner balance if the caller is not the owner", async () => {
+      const { refundContract, customer, orderReceipt } = await loadFixture(
+        deployFixture
+      );
+
+      const orderId = orderReceipt.events![0].args![0];
+      const orderPrice = ethers.utils.parseEther("100");
+
+      await refundContract.connect(customer).payOrder(orderPrice, orderId);
+
+      await expect(
+        refundContract.connect(customer).getOwnersBalance()
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  });
+
   describe("Updating Owner Balance", () => {
     it("Should update to the correct owner withdraw balance", async () => {
       const {
@@ -1012,6 +1046,25 @@ describe("RefundContract", () => {
       )
         .to.emit(refundContract, "OrderClosed")
         .withArgs(orderId);
+    });
+
+    it("Should reject to update the owner balance if the caller is not the owner", async () => {
+      const { refundContract, customer, orderReceipt, addedDeliveryPartner } =
+        await loadFixture(deployFixture);
+
+      const orderId = orderReceipt.events![0].args![0];
+      const orderPrice = ethers.utils.parseEther("100");
+
+      await refundContract.connect(customer).payOrder(orderPrice, orderId);
+      await refundContract
+        .connect(addedDeliveryPartner)
+        .markOrderAsShipped(orderId);
+
+      await expect(
+        refundContract
+          .connect(addedDeliveryPartner)
+          .updateOwnersBalance(orderNumber)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("Should reject to update the owner balance if the order number is not positive", async () => {
