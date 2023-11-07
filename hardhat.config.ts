@@ -9,7 +9,7 @@ import "hardhat-abi-exporter";
 dotenv.config();
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.17",
+  solidity: "0.8.21",
   networks: {
     hardhat: {
       loggingEnabled: true,

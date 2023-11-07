@@ -3,7 +3,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // DEV Dependencies, remove for production
 import "hardhat/console.sol";
 
-pragma solidity ^0.8.17;
+pragma solidity 0.8.21;
 
 contract RefundContract {
     // address of the ERC20 token contract used for payments
@@ -269,9 +269,10 @@ contract RefundContract {
         Order storage order = orders[orderId];
         require(order.customer != address(0), "Order does not exist");
 
-        if (order.status == Status.RETURNED) {
-            revert("Order has already been returned");
-        }
+        require(
+            order.status != Status.RETURNED,
+            "Order has already been returned"
+        );
 
         require(
             order.status == Status.DELIVERED,
@@ -298,15 +299,21 @@ contract RefundContract {
         console.log("refundOrder", orderNumber);
         uint orderId = openOrders[orderNumber];
         console.log("orderId", orderId);
+
         require(
             orderId > 0,
             "Order does not exist or has already been refunded"
         );
+
         Order storage order = orders[orderId];
+
         require(order.customer != address(0), "Order does not exist");
-        if (order.status == Status.REFUNDED) {
-            revert("Order has already been refunded");
-        }
+
+        require(
+            order.status != Status.REFUNDED,
+            "Order has already been refunded"
+        );
+
         require(
             order.status == Status.RETURNED || order.status == Status.PAID,
             "Order must be marked as returned or paid to be refunded"
