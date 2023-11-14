@@ -1,0 +1,25 @@
+{
+  "hash": "0x4653dee32995cb1f0fed49234c9a3ea3ab96e384d539bcd154493ad0c6d9d691",
+  "parentHash": "0x217844693889f9cf450c154a4341655f8a9cf445e971ebac3c0353c8506ab83c",
+  "number": 16998050,
+  "timestamp": 1680897248,
+  "nonce": "0x0000000000000000",
+  "difficulty": 0,
+  "gasLimit": {
+    "value": "30000000"
+  },
+  "gasUsed": {
+    "value": "46158"
+  },
+  "miner": "0xC014BA5EC014ba5ec014Ba5EC014ba5Ec014bA5E",
+  "extraData": "0x",
+  "transactions": [
+    "0xbd7b1bbd888d36f2ba0bc0c4c9f160b876e42dd42b836a986830a61841be9a3e"
+  ],
+  "baseFeePerGas": {
+    "value": "21379107713"
+  },
+  "_difficulty": {
+    "value": "0"
+  }
+}
