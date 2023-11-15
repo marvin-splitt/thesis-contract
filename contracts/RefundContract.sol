@@ -169,9 +169,8 @@ contract RefundContract {
             wad == orders[orderId].amount,
             "Payment amount must match order amount"
         );
-        // FIXME: This is potentially a re-entrancy vulnerability
-        erc20Contract.transferFrom(msg.sender, address(this), wad);
         orders[orderId].status = Status.PAID;
+        erc20Contract.transferFrom(msg.sender, address(this), wad);
         emit OrderPaid(
             orderId,
             msg.sender,
@@ -329,12 +328,11 @@ contract RefundContract {
             "Order refund period has expired"
         );
 
-        // FIXME: This is potentially a re-entrancy vulnerability
-        erc20Contract.transfer(order.customer, order.amount);
         order.status = Status.REFUNDED;
         order.refundedAt = block.timestamp;
         orders[orderId] = order;
         openOrders[orderNumber] = 0;
+        erc20Contract.transfer(order.customer, order.amount);
         emit OrderRefunded(
             orderId,
             order.customer,
