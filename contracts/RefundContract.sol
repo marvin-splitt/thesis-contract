@@ -170,13 +170,16 @@ contract RefundContract {
             "Payment amount must match order amount"
         );
         orders[orderId].status = Status.PAID;
-        erc20Contract.transferFrom(msg.sender, address(this), wad);
         emit OrderPaid(
             orderId,
             msg.sender,
             wad,
             Status.PAID,
             orders[orderId].externalOrderNumber
+        );
+        require(
+            erc20Contract.transferFrom(msg.sender, address(this), wad),
+            "Transfer failed"
         );
         return true;
     }
@@ -332,13 +335,17 @@ contract RefundContract {
         order.refundedAt = block.timestamp;
         orders[orderId] = order;
         openOrders[orderNumber] = 0;
-        erc20Contract.transfer(order.customer, order.amount);
+
         emit OrderRefunded(
             orderId,
             order.customer,
             order.amount,
             Status.REFUNDED,
             order.externalOrderNumber
+        );
+        require(
+            erc20Contract.transfer(order.customer, order.amount),
+            "Transfer failed"
         );
     }
 
@@ -394,7 +401,7 @@ contract RefundContract {
         console.log("transfering");
         uint amount = _ownerBalance;
         _ownerBalance = 0;
-        erc20Contract.transfer(owner, amount);
         emit OwnerBalanceWithdrawn(owner, amount);
+        require(erc20Contract.transfer(owner, amount), "Transfer failed");
     }
 }
